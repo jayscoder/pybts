@@ -1,2 +1,2 @@
-recursive-include pybt/static *
+recursive-include pybt/templates/static *
 recursive-include pybt/templates *

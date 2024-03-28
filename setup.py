@@ -3,6 +3,10 @@ from setuptools import setup, find_packages
 with open('README.md', 'r', encoding='utf-8') as f:
     long_description = f.read()
 
+# 读取requirements.txt文件中的内容并转换成列表
+with open('requirements.txt') as f:
+    install_requires = f.read().splitlines()
+print(install_requires)
 setup(
         name="pybt",
         version='1.0.0',
@@ -23,7 +27,7 @@ setup(
             'Programming Language :: Python :: 3 :: Only'
         ],
         keywords='Behavior Tree Reinforcement Learning',
-        install_requires=['jinja2'],
+        install_requires=install_requires,
         packages=find_packages(),
         include_package_data=True,  # 指示包含在包中的数据文件
         python_requires='>=3.6',

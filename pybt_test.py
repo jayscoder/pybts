@@ -32,7 +32,8 @@ if __name__ == '__main__':
     bt_board.clear()
     for i in range(10000):
         tree.tick()
-        bt_board.track()
+        bt_board.track(info={
+            'test_info': i
+        })
         time.sleep(0.5)
         print(i)
-

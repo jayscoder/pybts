@@ -139,8 +139,3 @@ class Condition(Node, ABC):
     def __init__(self, name: str):
         super().__init__(name=name)
 
-
-if __name__ == '__main__':
-    sequence = Sequence(name='a', memory=True, children=[])
-    sequence.reset()
-    print(isinstance(sequence, Composite))

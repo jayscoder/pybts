@@ -1,13 +1,12 @@
 from __future__ import annotations
 
 import json
-from typing import Callable, Tuple, List
+from typing import Callable
 from py_trees.behaviour import Behaviour
 from py_trees.composites import *
 from py_trees.decorators import *
 import xml.etree.ElementTree as ET
 import copy
-import py_trees
 from pybt.node import *
 from pybt.constants import *
 

@@ -1,6 +1,6 @@
 import json
 from flask import (
-    Flask, render_template, render_template_string, send_file, send_from_directory, jsonify, request,
+    Flask, send_from_directory, jsonify, request,
     Response
 )
 from pybt import utility
@@ -13,7 +13,7 @@ TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
 STATIC_DIR = os.path.join(TEMPLATES_DIR, 'static')
 
 
-class BTBoardServer:
+class BoardServer:
 
     def __init__(self, title: str = 'PYBT', log_dir: str = '', update_interval: int = 0.5, debug: bool = False,
                  host: str = '0.0.0.0', port: int = 10000):
@@ -213,7 +213,7 @@ def main():
     # 解析命令行参数
     args = parser.parse_args()
 
-    server = BTBoardServer(log_dir=args.dir, debug=args.debug, host=args.host, port=args.port)
+    server = BoardServer(log_dir=args.dir, debug=args.debug, host=args.host, port=args.port)
     server.run()
 
 

@@ -1,21 +1,5 @@
-from random import randrange
-
-from flask import Flask, render_template, render_template_string, send_file, send_from_directory, jsonify, request
-from aiohttp import web
-
-from pyecharts import options as opts
-from pyecharts.charts import Bar
 import os
-
-import pybt.utility
-from pybt.node import Node
-from py_trees.trees import BehaviourTree
 from pybt import utility
-import time
-import threading
-import asyncio
-import requests
-import threading
 from pybt.tree import Tree
 import json
 
@@ -31,6 +15,7 @@ class Board:
     def track(self, info: dict = None):
         """
         track当前运行信息
+        :param info: 额外信息
         :return:
         """
         json_data = {

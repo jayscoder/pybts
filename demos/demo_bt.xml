@@ -1,0 +1,21 @@
+<Sequence>
+    <Person name="小红" age="123"/>
+    <Parallel>
+        <Person name="小红" age="123"/>
+        <Selector>
+            <Sequence>
+                <Person name="小红" age="123"/>
+                <Parallel>
+                    <Person name="小红" age="123"/>
+                    <Selector>
+                        <Person name="小红" age="123"/>
+                        <Sequence>
+                            <Person name="小红" age="123"/>
+                            <Person name="小吕" age="666"/>
+                        </Sequence>
+                    </Selector>
+                </Parallel>
+            </Sequence>
+        </Selector>
+    </Parallel>
+</Sequence>

@@ -1,0 +1,288 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+    <script src="https://unpkg.com/vue@3"></script>
+    <!-- import CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/element-plus/dist/index.css">
+    <!-- import JavaScript -->
+    <script src="https://unpkg.com/element-plus"></script>
+    <script src="https://cdn.bootcss.com/jquery/3.0.0/jquery.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>
+    <title>PYBT</title>
+</head>
+<body>
+<div id="app">
+    <el-switch active-text="Paused" v-model="paused"/>
+</div>
+<div id="chart" style="width:100vw; height:98vh;"></div>
+<script>
+    const App = {
+        data() {
+            return {
+                message: "Hello Element Plus",
+                title: 'PYBT',
+                projects: [],
+                current_project: '',
+                update_interval: 0.5,
+                chart: null,
+            };
+        },
+        async mounted() {
+            this.chart = echarts.init(document.getElementById('chart'), 'white', {renderer: 'canvas'});
+            await this.fetchConfig()
+            await this.fetchTree()
+            // setInterval(() => {
+            //     this.fetchTree()
+            // }, this.update_interval * 1000)
+            this.chart.on('click', 'series', (params) => {
+                console.log('click', params)
+            });
+        },
+        methods: {
+            async fetchConfig() {
+                try {
+                    const response = await fetch("/get_config");
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const result = await response.json();
+                    this.title = result['title']
+                    this.projects = result['projects']
+                    this.update_interval = result['update_interval']
+                    console.log('fetchConfig', result)
+                    document.title = this.title
+                } catch (error) {
+                    console.error('There was a problem with the fetch operation:', error);
+                    this.$message.error(error)
+                }
+            },
+            async fetchTree() {
+                const option = {
+                    title: {
+                        text: this.title,
+                    },
+                    tooltip: {
+                        show: true,
+                        trigger: 'item', // 数据项图形触发，主要在散点图，饼图等无类目轴的图表中使用。
+                        triggerOn: 'click',
+                        formatter: (params) => {
+                            return params.data.data.tooltip
+                        }
+                    },
+                    timeline: {
+                        axisType: 'category',
+                        orient: 'vertical',
+                        autoPlay: false,
+                        inverse: true,
+                        playInterval: 1000,
+                        left: null,
+                        right: 0,
+                        top: 20,
+                        bottom: 20,
+                        width: 55,
+                        height: null,
+                        symbol: 'none',
+                        checkpointStyle: {
+                            borderWidth: 2
+                        },
+                        controlStyle: {
+                            showNextBtn: false,
+                            showPrevBtn: false
+                        },
+                        data: []
+                    },
+                    series: [
+                        {
+                            type: 'tree',
+                            id: 0,
+                            name: 'tree1',
+                            data: [],
+                            top: '10%',
+                            left: '8%',
+                            bottom: '22%',
+                            right: '10%',
+                            edgeShape: 'polyline',
+                            edgeForkPosition: '63%',
+                            initialTreeDepth: 3,
+                            lineStyle: {
+                                width: 3
+                            },
+                            label: {
+                                backgroundColor: '#fff',
+                                position: 'left',
+                                verticalAlign: 'middle',
+                                align: 'right',
+                                formatter(params) {
+                                    return params.data.data.name
+                                }
+                            },
+                            leaves: {
+                                label: {
+                                    position: 'right',
+                                    verticalAlign: 'middle',
+                                    align: 'left'
+                                }
+                            },
+                            emphasis: {
+                                focus: 'descendant'
+                            },
+                            expandAndCollapse: true,
+                            animationDuration: 550,
+                            animationDurationUpdate: 750,
+                            select: {
+                                itemStyle: {
+                                    borderColor: 'orange'
+                                }
+                            },
+                            selectedMode: 'single',
+
+                        }
+                    ]
+                }
+                try {
+                    const response = await fetch("/get_tree");
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const result = await response.json();
+                    option.timeline.data = result['steps']
+                    option.series[0].data.push(result['tree'])
+                    option.title.text = this.title + ': ' + result['step']
+                    this.chart.setOption(option)
+                    this.step = result['step']
+                } catch (e) {
+                    this.$message.error(e)
+                }
+            },
+            async fetchHistoryTree() {
+                const option = {
+                    baseOption: {
+                        title: {
+                            text: this.title,
+                            textAlign: 'center',
+                            textStyle: {
+                                fontSize: 36
+                            }
+                        },
+                        tooltip: {
+                            show: true,
+                            trigger: 'item', // 数据项图形触发，主要在散点图，饼图等无类目轴的图表中使用。
+                            triggerOn: 'click',
+                            formatter: (params) => {
+                                return params.data.data.tooltip
+                            }
+                        },
+                        timeline: {
+                            axisType: 'category',
+                            orient: 'vertical',
+                            autoPlay: false,
+                            inverse: true,
+                            playInterval: 1000,
+                            left: null,
+                            right: 0,
+                            top: 20,
+                            bottom: 20,
+                            width: 55,
+                            height: null,
+                            symbol: 'none',
+                            checkpointStyle: {
+                                borderWidth: 2
+                            },
+                            controlStyle: {
+                                showNextBtn: false,
+                                showPrevBtn: false
+                            },
+                            data: []
+                        },
+                        series: [
+                            {
+                                type: 'tree',
+                                id: 0,
+                                name: 'tree1',
+                                data: [],
+                                top: '10%',
+                                left: '8%',
+                                bottom: '22%',
+                                right: '10%',
+                                edgeShape: 'polyline',
+                                edgeForkPosition: '63%',
+                                initialTreeDepth: 3,
+                                lineStyle: {
+                                    width: 3
+                                },
+                                label: {
+                                    backgroundColor: '#fff',
+                                    position: 'left',
+                                    verticalAlign: 'middle',
+                                    align: 'right',
+                                    formatter(params) {
+                                        return params.data.data.name
+                                    }
+                                },
+                                leaves: {
+                                    label: {
+                                        position: 'right',
+                                        verticalAlign: 'middle',
+                                        align: 'left'
+                                    }
+                                },
+                                emphasis: {
+                                    focus: 'descendant'
+                                },
+                                expandAndCollapse: true,
+                                animationDuration: 550,
+                                animationDurationUpdate: 750,
+                                select: {
+                                    itemStyle: {
+                                        borderColor: 'orange'
+                                    }
+                                },
+                                selectedMode: 'single',
+
+                            }
+                        ]
+                    },
+                    options: []
+                }
+                try {
+                    const response = await fetch("/get_tree");
+                    if (!response.ok) {
+                        throw new Error('Network response was not ok');
+                    }
+                    const result = await response.json();
+                    const steps = result['steps']
+                    const step = result['step']
+                    option.timeline.data = steps
+                    option.options.push({
+                        title: {
+                            show: true,
+                            text: data.timeline[n] + ''
+                        },
+                        series: {
+                            name: data.timeline[n],
+                            type: 'scatter',
+                            itemStyle: itemStyle,
+                            data: data.series[n],
+                            symbolSize: function (val) {
+                                return sizeFunction(val[2]);
+                            }
+                        }
+                    });
+                    option.series[0].data.push(result['tree'])
+                    this.chart.setOption(option)
+                    console.log('fetchOption', result)
+                    this.step = result['step']
+                } catch (e) {
+                    this.$message.error(e)
+                }
+            }
+        }
+    };
+    const app = Vue.createApp(App);
+    app.use(ElementPlus);
+    app.mount("#app");
+</script>
+</body>
+</html>

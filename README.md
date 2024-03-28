@@ -15,24 +15,13 @@ PYBT (Python Behavior Tree) is a Python library for creating and managing behavi
 
 ## Key Components
 
-- Node Classes
-
-  : Define the behavior and structure of the behavior tree.
-
+- Node Classes: Define the behavior and structure of the behavior tree.
   - `Node`: Base class for all behavior tree nodes.
   - `Composite`, `Decorator`, `Sequence`, `Parallel`, `Selector`: Specialized node types for structuring tree logic.
-
 - Tree Management
-
-  :
-
   - `Tree`: Represents the entire behavior tree, initialized with a root node.
   - `Board`: Manages logging and tracking of tree state and history.
-
 - Web Server
-
-  :
-
   - `BoardServer`: Flask-based web server for visualizing and managing behavior trees. Supports dynamic data updates and visualization through ECharts.
 
 ## Installation

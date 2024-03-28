@@ -7,6 +7,7 @@ with open('README.md', 'r', encoding='utf-8') as f:
 with open('requirements.txt') as f:
     install_requires = f.read().splitlines()
 print(install_requires)
+
 setup(
         name="pybt",
         version='1.0.0',

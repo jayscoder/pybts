@@ -29,7 +29,7 @@ PYBT (Python Behavior Tree) is a Python library for creating and managing behavi
 Currently, PYBT is not available through package managers and must be installed by cloning the repository:
 
 ```sh
-pip install pybt
+pip install pybt2 # not pybt (pybt is already used, but i can't find on pypi)
 # or
 git clone https://github.com/wangtong2015/pybt.git
 cd pybt
@@ -46,22 +46,22 @@ pip install .
 
 ### Example
 
-
-
 ```python
 from pybt import Tree, board, builder
 from pybt.nodes import Action
 from py_trees import common
 
+
 # Define custom behavior node
 class Person(Action):
-    def __init__(self, name: str, age: int):
-        super().__init__(name=name)
-        self.age = age
+  def __init__(self, name: str, age: int):
+    super().__init__(name=name)
+    self.age = age
 
-    def update(self) -> common.Status:
-        self.age += 1
-        return common.Status.SUCCESS
+  def update(self) -> common.Status:
+    self.age += 1
+    return common.Status.SUCCESS
+
 
 # Build the behavior tree
 builder = builder.Builder()
@@ -74,11 +74,11 @@ bt_board = board.Board(tree=tree, log_dir='logs')
 
 bt_board.clear()
 for i in range(10000):
-    tree.tick()
-    bt_board.track(info={
-        'test_info': i
-    }) # track the tree status
-    time.sleep(0.5)
+  tree.tick()
+  bt_board.track(info={
+    'test_info': i
+  })  # track the tree status
+  time.sleep(0.5)
 ```
 
 ## Web Interface

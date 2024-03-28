@@ -26,13 +26,13 @@ builder.register('Person', Person.creator)
 root = builder.build_from_file('demos/demo_bt.xml')
 tree = pybt.Tree(root=root, name='Person')
 
-bt_board = pybt.board.Board(tree=tree, log_dir='logs')
+board = pybt.board.Board(tree=tree, log_dir='logs')
 
 if __name__ == '__main__':
-    bt_board.clear()
+    board.clear()
     for i in range(10000):
         tree.tick()
-        bt_board.track(info={
+        board.track(info={
             'test_info': i
         })
         time.sleep(0.5)

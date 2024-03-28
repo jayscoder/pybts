@@ -102,6 +102,14 @@ pybt --dir=logs --debug --host=localhost --port=10000
 
 After running the appropriate command, you can open a web browser and navigate to `http://localhost:10000` to view and interact with the behavior tree visualizations and management tools provided by PYBT.
 
+![image-20240329031220580](README.assets/image-20240329031220580.png)
+
+![image-20240329031233459](README.assets/image-20240329031233459.png)
+
+
+
+
+
 ## Acknowledgements
 
 This project, PYBT (Python Behavior Tree), is developed based on the `py_trees` library, a powerful and flexible Python framework for building and managing behavior trees. We extend our heartfelt thanks to the `py_trees` project and its contributors for providing the foundational components and concepts upon which PYBT is built.

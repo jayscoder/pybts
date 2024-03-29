@@ -1,9 +1,7 @@
 import os
 from pybts import utility
 from pybts.tree import Tree
-import json
-
-
+import jsonpickle as json
 class Board:
     def __init__(self, tree: Tree, log_dir: str = '.'):
         self.tree = tree
@@ -25,7 +23,8 @@ class Board:
             'tree' : utility.bt_to_json(self.tree.root),
             'info' : info
         }
-        json_text = json.dumps(json_data, indent=4, ensure_ascii=False)
+
+        json_text = json.dumps(json_data, indent=4)
         history_path = os.path.join(self.history_dir, f'{self.tree.round}-{self.tree.count}.json')
         with open(history_path, 'w') as f:
             f.write(json_text)
@@ -37,4 +36,3 @@ class Board:
             utility.delete_folder_contents(self.history_dir)
         if os.path.exists(self.current_path):
             os.remove(self.current_path)
-        self.track()

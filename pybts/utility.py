@@ -9,6 +9,10 @@ from queue import Queue
 import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import os
+import jsonpickle
+
+import jsonpickle.ext.numpy as jsonpickle_numpy
+jsonpickle_numpy.register_handlers()
 
 
 def read_queue_without_destroying(q: Queue):
@@ -40,18 +44,17 @@ def bt_to_node_type(node: py_trees.behaviour.Behaviour) -> str:
 
 def bt_to_json(node: py_trees.behaviour.Behaviour, ignore_children: bool = False) -> dict:
     info = {
-        'tag'           : node.__class__.__name__,
-        'children_count': len(node.children),
-        'children'      : [],
-        'data'          : {
+        'tag'     : node.__class__.__name__,
+        'children': [],
+        'data'    : {
             BT_PRESET_DATA_KEY.ID               : node.id.hex,
             BT_PRESET_DATA_KEY.STATUS           : node.status.name,
             BT_PRESET_DATA_KEY.TYPE             : bt_to_node_type(node),
             BT_PRESET_DATA_KEY.TAG              : node.__class__.__name__,
             BT_PRESET_DATA_KEY.FEEDBACK_MESSAGES: node.feedback_message,
             BT_PRESET_DATA_KEY.NAME             : node.name,
+            BT_PRESET_DATA_KEY.CHILDREN_COUNT   : len(node.children)
         },
-        # 'qualified_name'  : node.qualified_name,
     }
 
     if isinstance(node, Node):
@@ -158,7 +161,6 @@ def blackboards_to_json(*blackboards: py_trees.blackboard.Client) -> dict:
         for k in keys:
             json_data[k] = py_trees.blackboard.Blackboard.storage.get(k, None)
     return json_data
-
 
 # def clear_blackboards(*blackboards: py_trees.blackboard.Client):
 #     for b in blackboards:

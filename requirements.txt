@@ -2,3 +2,4 @@ py-trees>=2.2.3
 jinja2>=3.1.2
 PyYAML>=6.0.1
 flask~=3.0.2
+jsonpickle~=3.0.3

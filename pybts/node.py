@@ -90,7 +90,7 @@ class Parallel(py_trees.composites.Parallel, Composite):
             'policy'     : self.policy.__class__.__name__,
             'synchronise': self.policy.synchronise
         }
-    
+
 
 class Selector(py_trees.composites.Selector, Composite):
     def __init__(
@@ -99,7 +99,7 @@ class Selector(py_trees.composites.Selector, Composite):
             memory: bool = True,
             children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
     ):
-        super().__init__(name, children)
+        super().__init__(name=name, memory=memory, children=children)
         self.memory = memory
 
     @classmethod
@@ -132,7 +132,8 @@ class Action(Node, ABC):
 
     def to_data(self):
         from pybts.utility import read_queue_without_destroying
-        return { 'actions': read_queue_without_destroying(self.actions) }
+        actions = read_queue_without_destroying(self.actions)
+        return { 'actions': [str(act) for act in actions] }
 
 
 class Condition(Node, ABC):

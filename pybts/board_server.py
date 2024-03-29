@@ -114,6 +114,8 @@ class BoardServer:
     def get_projects(self):
         # 获取log_dir里面的所有的文件夹
         projects = []
+        if not os.path.exists(self.log_dir):
+            return []
         for filename in os.listdir(self.log_dir):
             filepath = os.path.join(self.log_dir, filename)
             if not os.path.isdir(filepath):

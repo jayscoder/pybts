@@ -102,3 +102,4 @@ class BT_PRESET_DATA_KEY:
     BLACKBOARD = 'blackboard'
     FEEDBACK_MESSAGES = 'feedback_message'
     NAME = 'name'
+    CHILDREN_COUNT = 'children_count'

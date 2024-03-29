@@ -12,7 +12,7 @@ print(install_requires)
 
 setup(
         name="pybts",
-        version='1.0.1',
+        version='1.1.0',
         description="pybts is a Python library for creating, managing, and visualizing behavior trees. It supports loading and exporting behavior trees from JSON and XML files, enables real-time visualization of execution processes, and allows for analysis of historical data",
         long_description=long_description,
         long_description_content_type='text/markdown',

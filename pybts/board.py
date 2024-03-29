@@ -1,6 +1,6 @@
 import os
-from pybt import utility
-from pybt.tree import Tree
+from pybts import utility
+from pybts.tree import Tree
 import json
 
 class Board:

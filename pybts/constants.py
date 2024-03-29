@@ -1,4 +1,4 @@
-from py_trees.common import Status
+from py_trees.common import Status, Access
 
 def _hex_color(color: str) -> tuple[int, int, int]:
     # 将十六进制颜色代码转换为RGB值
@@ -95,7 +95,10 @@ class BT_PRESET_DATA_KEY:
     """
     预设键
     """
-    ID = '_id'
-    TYPE = '_type'
-    STATUS = '_status'
-    TAG = '_tag'
+    ID = 'id'
+    TYPE = 'type'
+    STATUS = 'status'
+    TAG = 'tag'
+    BLACKBOARD = 'blackboard'
+    FEEDBACK_MESSAGES = 'feedback_message'
+    NAME = 'name'

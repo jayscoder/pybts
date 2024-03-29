@@ -3,7 +3,7 @@ from flask import (
     Flask, send_from_directory, jsonify, request,
     Response
 )
-from pybt import utility
+from pybts import utility
 import os
 import argparse
 import yaml

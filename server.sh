@@ -1,2 +1,2 @@
-python -m pybt.board_server --dir=logs --debug --host=localhost --port=10000
-pybt --dir=logs --debug --host=localhost --port=10000
+python -m pybts.board_server --dir=logs --debug --host=localhost --port=10000
+pybts --dir=logs --debug --host=localhost --port=10000

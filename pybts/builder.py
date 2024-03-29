@@ -7,8 +7,8 @@ from py_trees.composites import *
 from py_trees.decorators import *
 import xml.etree.ElementTree as ET
 import copy
-from pybt.node import *
-from pybt.constants import *
+from pybts.node import *
+from pybts.constants import *
 
 
 class Builder:
@@ -44,7 +44,7 @@ class Builder:
     def build_from_xml(self, xml_data: ET.Element | str, ignore_children: bool = False) -> Behaviour:
         if isinstance(xml_data, str):
             xml_data = ET.fromstring(xml_data)
-        from pybt.utility import xml_to_json
+        from pybts.utility import xml_to_json
         return self.build_from_json(json_data=xml_to_json(xml_node=xml_data, ignore_children=ignore_children),
                                     ignore_children=ignore_children)
 

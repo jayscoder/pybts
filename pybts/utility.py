@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from pybt.node import *
-from pybt.constants import *
+from pybts.node import *
+from pybts.constants import *
 import yaml
 from queue import Queue
 import xml.etree.ElementTree as ET
@@ -42,15 +42,17 @@ def bt_to_json(node: py_trees.behaviour.Behaviour, ignore_children: bool = False
         'children_count': len(node.children),
         'children'      : [],
         'data'          : {
-            BT_PRESET_DATA_KEY.ID    : node.id.hex,
-            BT_PRESET_DATA_KEY.STATUS: node.status.name,
-            BT_PRESET_DATA_KEY.TYPE  : bt_to_node_type(node),
-            BT_PRESET_DATA_KEY.TAG   : node.__class__.__name__,
-            'name'                   : node.name,
-            'feedback_message': node.feedback_message,
+            BT_PRESET_DATA_KEY.ID               : node.id.hex,
+            BT_PRESET_DATA_KEY.STATUS           : node.status.name,
+            BT_PRESET_DATA_KEY.TYPE             : bt_to_node_type(node),
+            BT_PRESET_DATA_KEY.TAG              : node.__class__.__name__,
+            BT_PRESET_DATA_KEY.FEEDBACK_MESSAGES: node.feedback_message,
+            BT_PRESET_DATA_KEY.NAME             : node.name,
+            BT_PRESET_DATA_KEY.BLACKBOARD       : bt_blackboards_to_json(node)
         },
         # 'qualified_name'  : node.qualified_name,
     }
+
     if isinstance(node, Node):
         info['data'] = {
             **info['data'],
@@ -70,8 +72,8 @@ def bt_to_echarts_json(node: dict | py_trees.behaviour.Behaviour | ET.Element, i
 
     symbol = BT_NODE_TYPE_TO_ECHARTS_SYMBOLS[node['data'][BT_PRESET_DATA_KEY.TYPE]]
     symbolSize = BT_NODE_TYPE_TO_ECHARTS_SYMBOL_SIZE[node['data'][BT_PRESET_DATA_KEY.TYPE]]
-    tooltip = yaml.dump(node['data'], allow_unicode=True)
-
+    tooltip = yaml.dump(node['data'], allow_unicode=True, indent=4)
+    
     d = {
         'name'      : node['data'][BT_PRESET_DATA_KEY.ID],
         'value'     : tooltip,
@@ -146,3 +148,12 @@ def delete_folder_contents(folder_path):
             delete_folder_contents(item_path)
             # 删除空文件夹
             os.rmdir(item_path)
+
+
+def bt_blackboards_to_json(node: py_trees.behaviour.Behaviour) -> dict:
+    json_data = { }
+    for b in node.blackboards:
+        keys = b.remappings.values()
+        for k in keys:
+            json_data[k] = py_trees.blackboard.Blackboard.storage.get(k, None)
+    return json_data

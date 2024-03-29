@@ -1,11 +1,13 @@
 import time
 from py_trees import common
-import pybt
+import pybts
 
-class Person(pybt.Action):
+class Person(pybts.Action):
     def __init__(self, name: str, age: int):
         super().__init__(name=name)
         self.age = age
+        self.cache = self.attach_blackboard_client()
+        self.cache.register_key('age', pybts.Access.WRITE)
 
     @classmethod
     def creator(cls, d, c):
@@ -17,16 +19,21 @@ class Person(pybt.Action):
 
     def to_data(self):
         return {
-            'age': self.age
+            'age': self.age,
+            'test': {
+                'fuck': {
+                    'aaa': 1
+                }
+            }
         }
 
 
-builder = pybt.builder.Builder()
+builder = pybts.builder.Builder()
 builder.register('Person', Person.creator)
 root = builder.build_from_file('demos/demo_bt.xml')
-tree = pybt.Tree(root=root, name='Person')
+tree = pybts.Tree(root=root, name='Person')
 
-board = pybt.board.Board(tree=tree, log_dir='logs')
+board = pybts.board.Board(tree=tree, log_dir='logs')
 
 if __name__ == '__main__':
     board.clear()
@@ -37,3 +44,6 @@ if __name__ == '__main__':
         })
         time.sleep(0.5)
         print(i)
+    # WebUI
+    # python -m pybts.board_server --dir=logs --debug --host=localhost --port=10000
+    # or pybts - -dir = logs - -debug - -host = localhost - -port = 10000

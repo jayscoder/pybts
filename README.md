@@ -1,8 +1,8 @@
-# PYBT - Python Behavior Tree
+# PYBTS - Python Behavior Tree
 
 ## Overview
 
-PYBT (Python Behavior Tree) is a Python library for creating and managing behavior trees, which are used to model the decision-making process in artificial intelligence systems, such as in games or robotics. The library provides a structured way to organize complex behaviors through a hierarchy of nodes, each representing a specific action, decision, or condition.
+pybts (Python Behavior Tree) is a Python library for creating and managing behavior trees, which are used to model the decision-making process in artificial intelligence systems, such as in games or robotics. The library provides a structured way to organize complex behaviors through a hierarchy of nodes, each representing a specific action, decision, or condition.
 
 ## Features
 
@@ -26,31 +26,31 @@ PYBT (Python Behavior Tree) is a Python library for creating and managing behavi
 
 ## Installation
 
-Currently, PYBT is not available through package managers and must be installed by cloning the repository:
+Currently, pybts is not available through package managers and must be installed by cloning the repository:
 
 ```sh
-pip install pybt2 # not pybt (pybt is already used, but i can't find on pypi)
+pip install pybts # not pybts
 # or
-git clone https://github.com/wangtong2015/pybt.git
-cd pybt
+git clone https://github.com/wangtong2015/pybts.git
+cd pybts
 pip install -r requirements.txt
 pip install .
 ```
 
 ## Usage
 
-1. **Define Behavior Nodes**: Create custom behavior nodes by extending `pybt.Node` or other specific node types like `Action`, `Condition`, etc.
-2. **Build the Behavior Tree**: Use the `pybt.builder.Builder` to create trees from your nodes.
+1. **Define Behavior Nodes**: Create custom behavior nodes by extending `pybts.Node` or other specific node types like `Action`, `Condition`, etc.
+2. **Build the Behavior Tree**: Use the `pybts.builder.Builder` to create trees from your nodes.
 3. **Track and Log**: Initialize a `Board` object with your tree to enable tracking and logging.
 4. **Visualize and Manage**: Start the `BoardServer` to view and interact with the behavior tree in a web interface.
 
 ### Example
 
 ```python
-from pybt import Tree, board, builder
-from pybt.nodes import Action
+from pybts import Tree, board, builder
+from pybts.node import Action
 from py_trees import common
-
+import time
 
 # Define custom behavior node
 class Person(Action):
@@ -88,19 +88,19 @@ for i in range(10000):
 Use the following command to start the `BoardServer` with the specified log directory, enabling debug mode, and setting the host and port:
 
 ```
-python -m pybt.board_server --dir=logs --debug --host=localhost --port=10000
+python -m pybts.board_server --dir=logs --debug --host=localhost --port=10000
 ```
 
-1. This command starts the PYBT board server using the `logs` directory for storing and retrieving behavior tree logs. Debug mode is enabled, and the server is accessible at `http://localhost:10000`.
-2. **Alternative Command:** If you have a command line interface setup for `pybt` as a package, you can also start the server using a more direct command:
+1. This command starts the pybts board server using the `logs` directory for storing and retrieving behavior tree logs. Debug mode is enabled, and the server is accessible at `http://localhost:10000`.
+2. **Alternative Command:** If you have a command line interface setup for `pybts` as a package, you can also start the server using a more direct command:
 
 ```bash
-pybt --dir=logs --debug --host=localhost --port=10000
+pybts --dir=logs --debug --host=localhost --port=10000
 ```
 
-1. This assumes that `pybt` is configured as a command-line tool that internally calls `pybt.board_server`.
+1. This assumes that `pybts` is configured as a command-line tool that internally calls `pybts.board_server`.
 
-After running the appropriate command, you can open a web browser and navigate to `http://localhost:10000` to view and interact with the behavior tree visualizations and management tools provided by PYBT.
+After running the appropriate command, you can open a web browser and navigate to `http://localhost:10000` to view and interact with the behavior tree visualizations and management tools provided by pybts.
 
 ![image-20240329031220580](README.assets/image-20240329031220580.png)
 
@@ -112,12 +112,12 @@ After running the appropriate command, you can open a web browser and navigate t
 
 ## Acknowledgements
 
-This project, PYBT (Python Behavior Tree), is developed based on the `py_trees` library, a powerful and flexible Python framework for building and managing behavior trees. We extend our heartfelt thanks to the `py_trees` project and its contributors for providing the foundational components and concepts upon which PYBT is built.
+This project, PYBTS (Python Behavior Tree), is developed based on the `py_trees` library, a powerful and flexible Python framework for building and managing behavior trees. We extend our heartfelt thanks to the `py_trees` project and its contributors for providing the foundational components and concepts upon which pybts is built.
 
 For more information about `py_trees` and to access its source code, visit the official GitHub repository: [py_trees on GitHub](https://github.com/splintered-reality/py_trees).
 
-We appreciate the effort and expertise that has gone into `py_trees`, making it possible for us to develop advanced features in PYBT and offer a comprehensive behavior tree solution in the Python ecosystem.
+We appreciate the effort and expertise that has gone into `py_trees`, making it possible for us to develop advanced features in pybts and offer a comprehensive behavior tree solution in the Python ecosystem.
 
 ## Development and Contributions
 
-Contributions to PYBT are welcome! You can contribute by submitting issues, providing updates to documentation, or submitting pull requests with new features or bug fixes.
+Contributions to pybts are welcome! You can contribute by submitting issues, providing updates to documentation, or submitting pull requests with new features or bug fixes.

@@ -9,12 +9,12 @@ with open('requirements.txt') as f:
 print(install_requires)
 
 setup(
-        name="pybt",
+        name="pybts",
         version='1.0.0',
-        description="pybt is a Python library for creating, managing, and visualizing behavior trees. It supports loading and exporting behavior trees from JSON and XML files, enables real-time visualization of execution processes, and allows for analysis of historical data",
+        description="pybts is a Python library for creating, managing, and visualizing behavior trees. It supports loading and exporting behavior trees from JSON and XML files, enables real-time visualization of execution processes, and allows for analysis of historical data",
         long_description=long_description,
         long_description_content_type='text/markdown',
-        url='https://github.com/wangtong2015/pybt',
+        url='https://github.com/wangtong2015/pybts',
         author="Wang Tong",
         author_email="astroboythu@gmail.com",
         license="MIT",
@@ -34,7 +34,7 @@ setup(
         python_requires='>=3.6',
         entry_points={
             'console_scripts': [
-                'pybt=pybt.board_server:main',  # 确认这里是正确的路径到您的Flask app启动函数
+                'pybts=pybts.board_server:main',  # 确认这里是正确的路径到您的Flask app启动函数
             ],
         },
 )

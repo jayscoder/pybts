@@ -1,16 +1,20 @@
 from __future__ import annotations
 from abc import ABC
 from queue import Queue
-from pybt.constants import *
+from pybts.constants import *
 import typing
 import py_trees
 
+
 class Node(py_trees.behaviour.Behaviour, ABC):
-    def __init__(self, name: str):
-        super().__init__(name=name)
+    """
+    Base class for all nodes in the behavior tree
+    """
+
+    def __init__(self, name: str = ''):
+        super().__init__(name=name or self.__class__.__name__)
 
     def reset(self):
-        print('reset', self.__class__.__name__)
         pass
 
     @classmethod
@@ -28,21 +32,21 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 class Composite(py_trees.composites.Composite, Node, ABC):
     def __init__(
             self,
-            name: str,
+            name: str = 'Composite',
             children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
     ):
         super().__init__(name=name, children=children)
 
 
 class Decorator(py_trees.decorators.Decorator, Node, ABC):
-    def __init__(self, name: str, child: py_trees.behaviour.Behaviour):
+    def __init__(self, child: py_trees.behaviour.Behaviour, name: str = 'Decorator'):
         super().__init__(name=name, child=child)
 
 
 class Sequence(py_trees.composites.Sequence, Composite):
     def __init__(
             self,
-            name: str,
+            name: str = 'Sequence',
             memory: bool = True,
             children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
     ):
@@ -61,7 +65,7 @@ class Sequence(py_trees.composites.Sequence, Composite):
 class Parallel(py_trees.composites.Parallel, Composite):
     def __init__(
             self,
-            name: str,
+            name: str = 'Parallel',
             policy: str = 'SuccessOnOne',  # SuccessOnOne/SuccessOnAll
             synchronise: bool = False,
             children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
@@ -91,8 +95,8 @@ class Parallel(py_trees.composites.Parallel, Composite):
 class Selector(py_trees.composites.Selector, Composite):
     def __init__(
             self,
-            name: str,
-            memory: bool,
+            name: str = 'Selector',
+            memory: bool = True,
             children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
     ):
         super().__init__(name, children)
@@ -109,7 +113,7 @@ class Selector(py_trees.composites.Selector, Composite):
 
 
 class Inverter(py_trees.decorators.Inverter, Decorator):
-    def __init__(self, name: str, child: py_trees.behaviour.Behaviour):
+    def __init__(self, child: py_trees.behaviour.Behaviour, name: str = 'Inverter'):
         super().__init__(name=name, child=child)
 
     @classmethod
@@ -122,12 +126,12 @@ class Action(Node, ABC):
     行为节点
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = ''):
         super().__init__(name=name)
         self.actions = Queue()
 
     def to_data(self):
-        from pybt.utility import read_queue_without_destroying
+        from pybts.utility import read_queue_without_destroying
         return { 'actions': read_queue_without_destroying(self.actions) }
 
 
@@ -136,6 +140,5 @@ class Condition(Node, ABC):
     条件节点
     """
 
-    def __init__(self, name: str):
+    def __init__(self, name: str = ''):
         super().__init__(name=name)
-

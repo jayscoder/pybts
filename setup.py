@@ -1,10 +1,12 @@
 from setuptools import setup, find_packages
+import os
 
-with open('README.md', 'r', encoding='utf-8') as f:
+BASE_DIR = os.path.dirname(__file__)
+with open(os.path.join(BASE_DIR, 'README.md'), 'r', encoding='utf-8') as f:
     long_description = f.read()
 
 # 读取requirements.txt文件中的内容并转换成列表
-with open('requirements.txt') as f:
+with open(os.path.join(BASE_DIR, 'requirements.txt')) as f:
     install_requires = f.read().splitlines()
 print(install_requires)
 

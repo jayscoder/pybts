@@ -6,8 +6,8 @@ from cachetools import Cache
 
 class TestNode(pybts.Action):
 
-    def __init__(self, name: str):
-        super().__init__(name=name)
+    def __init__(self):
+        super().__init__()
         self.cache = self.attach_blackboard_client(name='cache', namespace='a')
         self.cache.register_key('value', pybts.Access.WRITE)
         self.cache.register_key('age', pybts.Access.WRITE)
@@ -39,8 +39,9 @@ if __name__ == '__main__':
     seq = pybts.Sequence(
             name='',
             children=[
-                TestNode('test'),
+                TestNode(),
                 TestNode2('test2')
             ])
-    print(pybts.utility.bt_blackboards_to_json(seq.children[0]))
-    seq.tick_once()
+    # print(pybts.utility.bt_blackboards_to_json(seq.children[0]))
+    # seq.tick_once()
+    print(seq.children[0].name)

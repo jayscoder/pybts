@@ -62,33 +62,105 @@ class Sequence(py_trees.composites.Sequence, Composite):
         }
 
 
-class Parallel(py_trees.composites.Parallel, Composite):
+class Parallel(Composite):
     def __init__(
             self,
             name: str = 'Parallel',
-            policy: str = 'SuccessOnOne',  # SuccessOnOne/SuccessOnAll
-            synchronise: bool = False,
+            success_threshold: int = 1,  # 成功的节点个数（大于等于这个数量才会认为并行节点成功，-1表示全部）
             children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
     ):
-        if policy == 'SuccessOnOne':
-            p = py_trees.common.ParallelPolicy.SuccessOnOne()
-        elif policy == 'SuccessOnAll':
-            p = py_trees.common.ParallelPolicy.SuccessOnAll(synchronise=synchronise)
-        else:
-            p = py_trees.common.ParallelPolicy.SuccessOnOne()
-        super().__init__(name=name, policy=p, children=children)
+        super().__init__(name=name, children=children)
+        self.success_threshold = success_threshold
+        assert self.success_threshold >= -1, "success_threshold is not valid"
 
     @classmethod
     def creator(cls, d: dict, c: list):
         return cls(name=d['name'],
-                   policy=d.get('policy', 'SuccessOnOne'),
-                   synchronise=bool(d.get('synchronise', False)),
+                   success_threshold=int(d.get('success_threshold', 1)),
                    children=c)
+
+    def tick(self) -> typing.Iterator[py_trees.behaviour.Behaviour]:
+        """
+        Tick over the children.
+
+        Yields:
+            :class:`~py_trees.behaviour.Behaviour`: a reference to itself or one of its children
+
+        Raises:
+            RuntimeError: if the policy configuration was invalid
+        """
+        self.logger.debug("%s.tick()" % self.__class__.__name__)
+
+        # reset
+        if self.status != Status.RUNNING:
+            self.logger.debug("%s.tick(): re-initialising" % self.__class__.__name__)
+            for child in self.children:
+                # reset the children, this ensures old SUCCESS/FAILURE status flags
+                # don't break the synchronisation logic below
+                if child.status != Status.INVALID:
+                    child.stop(Status.INVALID)
+            self.current_child = None
+            # subclass (user) handling
+            self.initialise()
+
+        # nothing to do
+        if not self.children:
+            self.current_child = None
+            self.stop(Status.SUCCESS)
+            yield self
+            return
+
+        # process them all first
+        for child in self.children:
+            for node in child.tick():
+                yield node
+
+        # determine new status
+        new_status = Status.RUNNING
+        self.current_child = self.children[-1]
+        successful = [
+            child
+            for child in self.children
+            if child.status == Status.SUCCESS
+        ]
+        threshold = self.success_threshold
+        if threshold == -1:
+            threshold = len(self.children)
+
+        if len(successful) >= threshold:
+            new_status = Status.SUCCESS
+        else:
+            new_status = Status.FAILURE
+        # this parallel may have children that are still running
+        # so if the parallel itself has reached a final status, then
+        # these running children need to be terminated so they don't dangle
+        if new_status != Status.RUNNING:
+            self.stop(new_status)
+        self.status = new_status
+        yield self
+
+    def stop(self, new_status: Status = Status.INVALID) -> None:
+        """
+        Ensure that any running children are stopped.
+
+        Args:
+            new_status : the composite is transitioning to this new status
+        """
+        self.logger.debug(
+                f"{self.__class__.__name__}.stop()[{self.status}->{new_status}]"
+        )
+
+        # clean up dangling (running) children
+        for child in self.children:
+            if child.status == Status.RUNNING:
+                # this unfortunately knocks out it's running status for introspection
+                # but logically is the correct thing to do, see #132.
+                child.stop(Status.INVALID)
+        Composite.stop(self, new_status)
 
     def to_data(self):
         return {
-            'policy'     : self.policy.__class__.__name__,
-            'synchronise': self.policy.synchronise
+            'success_threshold': self.success_threshold
         }
 
 

@@ -35,16 +35,36 @@ class BoardServer:
         self.app.add_url_rule("/<path:path>", view_func=self.index, methods=['GET'])
 
         self.option = {
-            "title"  : {
+            "title"   : {
                 "text"   : "PYBT",
                 "subtext": "",
             },
-            "tooltip": {
+            "tooltip" : {
                 "show"     : True,
                 "trigger"  : "item",
                 "triggerOn": "mousemove|click"
             },
-            "series" : [
+            "toolbox" : {
+                "show"    : True,
+                "itemSize": 30,
+                "itemGap" : 16,
+                "feature" : {
+                    "myTool1"    : {  # 播放/暂停
+                        "show" : True,
+                        "title": "暂停",
+                        "icon" : "",
+                    },
+                    "myTool2"    : {
+                        "show" : True,
+                        "title": "下载XML",
+                        "icon" : "",
+                    },
+                    "saveAsImage": {
+                        "show": True
+                    },
+                }
+            },
+            "series"  : [
                 {
                     "type"                   : "tree",
                     "id"                     : 0,
@@ -60,6 +80,7 @@ class BoardServer:
                     "lineStyle"              : {
                         "width": 2,
                     },
+                    "roam"                   : True,
                     "label"                  : {
                         "backgroundColor": "#fff",
                         "position"       : "left",
@@ -217,6 +238,7 @@ def main():
 
     server = BoardServer(log_dir=args.dir, debug=args.debug, host=args.host, port=args.port)
     server.run()
+
 
 if __name__ == '__main__':
     main()

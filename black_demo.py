@@ -4,7 +4,7 @@ import pybts
 from cachetools import Cache
 
 
-class TestNode(pybts.Action):
+class TestNodeA(pybts.Action):
 
     def __init__(self):
         super().__init__()
@@ -21,10 +21,10 @@ class TestNode(pybts.Action):
         return Status.SUCCESS
 
 
-class TestNode2(pybts.Action):
+class TestNodeB(pybts.Action):
 
-    def __init__(self, name: str):
-        super().__init__(name=name)
+    def __init__(self):
+        super().__init__()
         self.cache = self.attach_blackboard_client(name='cache', namespace='a')
         self.cache.register_key('value', pybts.Access.WRITE)
         self.cache.register_key('age', pybts.Access.WRITE)
@@ -32,16 +32,21 @@ class TestNode2(pybts.Action):
 
     def update(self) -> Status:
         print(py_trees.blackboard.Blackboard.storage)
-        return Status.SUCCESS
+        return Status.FAILURE
 
 
 if __name__ == '__main__':
-    seq = pybts.Sequence(
+
+    node = pybts.Parallel(
             name='',
             children=[
-                TestNode(),
-                TestNode2('test2')
-            ])
-    # print(pybts.utility.bt_blackboards_to_json(seq.children[0]))
-    # seq.tick_once()
-    print(seq.children[0].name)
+                # TestNodeA(),
+                TestNodeA(),
+                # TestNodeA(),
+                TestNodeB()
+            ],
+            success_threshold=-1
+    )
+    node.setup()
+    node.tick_once()
+    print(node.status)

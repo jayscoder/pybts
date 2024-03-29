@@ -1,5 +1,10 @@
 # PYBTS - Python Behavior Tree
 
+[![PyPI Latest Release](https://img.shields.io/pypi/v/pybts.svg)](https://pypi.org/project/pybts/)
+[![License](https://img.shields.io/pypi/l/pybts.svg)](https://github.com/wangtong2015/pybts)
+[![Package Status](https://img.shields.io/pypi/status/pybts.svg)](https://pypi.org/project/pybts/)
+
+
 ## Overview
 
 pybts (Python Behavior Tree) is a Python library for creating and managing behavior trees, which are used to model the decision-making process in artificial intelligence systems, such as in games or robotics. The library provides a structured way to organize complex behaviors through a hierarchy of nodes, each representing a specific action, decision, or condition.

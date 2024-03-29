@@ -36,16 +36,20 @@ tree = pybts.Tree(root=root, name='Person')
 board = pybts.board.Board(tree=tree, log_dir='logs')
 
 if __name__ == '__main__':
-    board.clear()
-    for i in range(10000):
-        tree.tick()
-        board.track(info={
-            'test_info': i,
-        })
-        time.sleep(0.5)
-        if i % 5 == 0:
-            tree.reset()
-        print(i)
+    pybts.logging.level = pybts.logging.Level.DEBUG
+    for data in board.iterate():
+        print(data)
+        break
+    # board.clear()
+    # for i in range(10000):
+    #     tree.tick()
+    #     board.track(info={
+    #         'test_info': i,
+    #     })
+    #     time.sleep(0.5)
+    #     if i % 5 == 0:
+    #         tree.reset()
+    #     print(i)
     # WebUI
     # python -m pybts.board_server --dir=logs --debug --host=localhost --port=10000
     # or pybts - -dir = logs - -debug - -host = localhost - -port = 10000

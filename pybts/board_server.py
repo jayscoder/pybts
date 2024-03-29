@@ -35,16 +35,16 @@ class BoardServer:
         self.app.add_url_rule("/<path:path>", view_func=self.index, methods=['GET'])
 
         self.option = {
-            "title"   : {
+            "title"  : {
                 "text"   : "PYBT",
                 "subtext": "",
             },
-            "tooltip" : {
+            "tooltip": {
                 "show"     : True,
                 "trigger"  : "item",
                 "triggerOn": "mousemove|click"
             },
-            "toolbox" : {
+            "toolbox": {
                 "show"    : True,
                 "itemSize": 30,
                 "itemGap" : 16,
@@ -64,7 +64,7 @@ class BoardServer:
                     },
                 }
             },
-            "series"  : [
+            "series" : [
                 {
                     "type"                   : "tree",
                     "id"                     : 0,
@@ -157,36 +157,33 @@ class BoardServer:
     def get_option(self):
         return jsonify(self.option)
 
-    def get_history(self, project) -> list[str]:
-        history_path = os.path.join(self.log_dir, project, 'pybts-history')
-        if not os.path.exists(history_path):
-            return []
-
-        history_names = []
-        for filename in os.listdir(history_path):
-            if filename.endswith('.json'):
-                history_names.append(filename.removesuffix('.json'))
-        history_names = sorted(history_names, key=lambda x: [int(part) for part in x.split('-')])
-        return history_names
+    # def get_history(self, project) -> list[str]:
+    #     history_path = os.path.join(self.log_dir, project, 'pybts-history')
+    #     if not os.path.exists(history_path):
+    #         return []
+    #
+    #     history_names = []
+    #     for filename in os.listdir(history_path):
+    #         if filename.endswith('.json'):
+    #             history_names.append(filename.removesuffix('.json'))
+    #     history_names = sorted(history_names, key=lambda x: [int(part) for part in x.split('-')])
+    #     return history_names
 
     def get_xml_data(self):
         project = request.args.get('project') or ''
-        stage = request.args.get('stage') or ''
-        log_data = self._get_log_data(project=project, stage=stage)
+        track_id = request.args.get('id') or ''
+        log_data = self._get_log_data(project=project, track_id=track_id)
         if log_data is None:
-            return jsonify({ 'error': f'project {project}: {stage} not exist' }), 500
+            return jsonify({ 'error': f'project {project}: {track_id} not exist' }), 500
 
         xml_data = utility.bt_to_xml(log_data['tree'])
         return Response(xml_data, mimetype='application/xml')
 
-    def _get_log_data(self, project, stage):
-        if stage == '':
+    def _get_log_data(self, project, track_id):
+        if track_id == '':
             filepath = os.path.join(self.log_dir, project, 'pybts.json')
         else:
-            filepath = os.path.join(self.log_dir, project, 'pybts-history', f'{stage}.json')
-        if not os.path.exists(filepath):
-            return None
-
+            filepath = os.path.join(self.log_dir, project, 'pybts-history', f'{track_id}.json')
         if os.path.exists(filepath):
             with open(filepath, 'r') as f:
                 return json.load(f)
@@ -194,29 +191,28 @@ class BoardServer:
 
     def get_echarts_data(self):
         project = request.args.get('project') or ''
-        stage = request.args.get('stage')
-        log_data = self._get_log_data(project=project, stage=stage)
-        if log_data is None:
-            return jsonify({ 'error': f'project {project}: {stage} not exist' }), 500
+        track_id = request.args.get('id')
+        log_data = self._get_log_data(project=project, track_id=track_id)
+        current_data = log_data
+        if track_id != '':
+            current_data = self._get_log_data(project=project, track_id='')
+        if log_data is None or current_data is None:
+            return jsonify({ 'error': f'project {project}: {track_id} not exist' }), 500
+
         tree_data = utility.bt_to_echarts_json(log_data['tree'])
-        stage = log_data['stage']
 
         subtitle = ''
         if 'info' in log_data and log_data['info'] is not None:
             subtitle = yaml.dump(log_data['info'], allow_unicode=True)
 
-        history = self.get_history(project)
-        if len(history) > 0:
-            page = history.index(stage) + 1
-        else:
-            page = 1
         return jsonify({
             'tree'    : tree_data,
-            'stage'   : stage,
-            'history' : history,
             'subtitle': subtitle,
-            'title'   : f"{project}  {stage} / {page}",
-            'page'    : page
+            'title'   : f"{project}  {log_data['stage']} / {log_data['id']}",
+            'id'      : log_data['id'],
+            'stage'   : log_data['stage'],
+            'page'    : log_data['id'],
+            'total'   : current_data['id']
         })
 
 

@@ -8,23 +8,27 @@ from pybts.node import *
 from pybts.constants import *
 import uuid
 
+
 class Builder:
     def __init__(self):
         self.repo = { }
+        self.repo_desc = { }  # 仓库的描述
         self.register_default()
 
-    def register(self, name: str | list[str], creator: Callable[[dict, [Node]], Node]):
+    def register(self, name: str | list[str], creator: Callable[[dict, [Node]], Node], desc: str = ''):
         if isinstance(name, str):
             name_list = name.split('|')
             for _name in name_list:
                 self.repo[_name] = creator
+                if desc != '':
+                    self.repo_desc[_name] = desc.strip()
         else:
             for _name in name:
-                self.register(_name, creator)
+                self.register(_name, creator, desc=desc)
 
     def register_bt(self, *nodes: Node.__class__):
         for node in nodes:
-            self.register(node.__name__, node.creator)
+            self.register(node.__name__, node.creator, desc=node.__doc__ or node.__name__)
             module_name = f'{node.__module__}.{node.__name__}'
             self.register(module_name, node.creator)
 
@@ -72,3 +76,9 @@ class Builder:
 
     def register_default(self):
         self.register_bt(Sequence, Parallel, Selector, Inverter)
+
+
+if __name__ == '__main__':
+    builder = Builder()
+    print(builder.repo_desc)
+    # print(Node.__doc__)

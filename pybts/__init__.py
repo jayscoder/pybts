@@ -7,3 +7,4 @@ from .tree import Tree
 from .node import *
 from .board import Board
 from .builder import Builder
+from py_trees import logging

@@ -30,6 +30,10 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 
 
 class Composite(py_trees.composites.Composite, Node, ABC):
+    """
+    composite base class node
+    """
+
     def __init__(
             self,
             name: str = 'Composite',
@@ -39,11 +43,19 @@ class Composite(py_trees.composites.Composite, Node, ABC):
 
 
 class Decorator(py_trees.decorators.Decorator, Node, ABC):
+    """
+    decorator base class node
+    """
+
     def __init__(self, child: py_trees.behaviour.Behaviour, name: str = 'Decorator'):
         super().__init__(name=name, child=child)
 
 
 class Sequence(py_trees.composites.Sequence, Composite):
+    """
+    sequence base class node
+    """
+
     def __init__(
             self,
             name: str = 'Sequence',
@@ -63,6 +75,10 @@ class Sequence(py_trees.composites.Sequence, Composite):
 
 
 class Parallel(Composite):
+    """
+    A parallel ticks every child every time the parallel is itself ticked.
+    """
+
     def __init__(
             self,
             name: str = 'Parallel',
@@ -165,6 +181,11 @@ class Parallel(Composite):
 
 
 class Selector(py_trees.composites.Selector, Composite):
+    """
+    Selectors are the decision makers.
+    A selector executes each of its child behaviours in turn until one of them succeeds
+    """
+
     def __init__(
             self,
             name: str = 'Selector',
@@ -185,6 +206,8 @@ class Selector(py_trees.composites.Selector, Composite):
 
 
 class Inverter(py_trees.decorators.Inverter, Decorator):
+    """A decorator that inverts the result of a class's update function."""
+
     def __init__(self, child: py_trees.behaviour.Behaviour, name: str = 'Inverter'):
         super().__init__(name=name, child=child)
 
@@ -197,6 +220,9 @@ class Action(Node, ABC):
     """
     行为节点
     """
+    meta = {
+        'desc': '行为节点'
+    }
 
     def __init__(self, name: str = ''):
         super().__init__(name=name)
@@ -212,6 +238,9 @@ class Condition(Node, ABC):
     """
     条件节点
     """
+    meta = {
+        'desc': '条件节点'
+    }
 
     def __init__(self, name: str = ''):
         super().__init__(name=name)

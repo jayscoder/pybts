@@ -21,8 +21,8 @@ class Person(pybts.Action):
         return {
             'age': self.age,
             'test': {
-                'fuck': {
-                    'aaa': 1
+                'hello': {
+                    'world': 1
                 }
             }
         }
@@ -40,9 +40,11 @@ if __name__ == '__main__':
     for i in range(10000):
         tree.tick()
         board.track(info={
-            'test_info': i
+            'test_info': i,
         })
         time.sleep(0.5)
+        if i % 5 == 0:
+            tree.reset()
         print(i)
     # WebUI
     # python -m pybts.board_server --dir=logs --debug --host=localhost --port=10000

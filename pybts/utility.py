@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import py_trees.blackboard
+
 from pybts.node import *
 from pybts.constants import *
 import yaml
@@ -48,7 +50,6 @@ def bt_to_json(node: py_trees.behaviour.Behaviour, ignore_children: bool = False
             BT_PRESET_DATA_KEY.TAG              : node.__class__.__name__,
             BT_PRESET_DATA_KEY.FEEDBACK_MESSAGES: node.feedback_message,
             BT_PRESET_DATA_KEY.NAME             : node.name,
-            BT_PRESET_DATA_KEY.BLACKBOARD       : bt_blackboards_to_json(node)
         },
         # 'qualified_name'  : node.qualified_name,
     }
@@ -73,7 +74,7 @@ def bt_to_echarts_json(node: dict | py_trees.behaviour.Behaviour | ET.Element, i
     symbol = BT_NODE_TYPE_TO_ECHARTS_SYMBOLS[node['data'][BT_PRESET_DATA_KEY.TYPE]]
     symbolSize = BT_NODE_TYPE_TO_ECHARTS_SYMBOL_SIZE[node['data'][BT_PRESET_DATA_KEY.TYPE]]
     tooltip = yaml.dump(node['data'], allow_unicode=True, indent=4)
-    
+
     d = {
         'name'      : node['data'][BT_PRESET_DATA_KEY.ID],
         'value'     : tooltip,
@@ -150,10 +151,17 @@ def delete_folder_contents(folder_path):
             os.rmdir(item_path)
 
 
-def bt_blackboards_to_json(node: py_trees.behaviour.Behaviour) -> dict:
+def blackboards_to_json(*blackboards: py_trees.blackboard.Client) -> dict:
     json_data = { }
-    for b in node.blackboards:
+    for b in blackboards:
         keys = b.remappings.values()
         for k in keys:
             json_data[k] = py_trees.blackboard.Blackboard.storage.get(k, None)
     return json_data
+
+
+# def clear_blackboards(*blackboards: py_trees.blackboard.Client):
+#     for b in blackboards:
+#         keys = b.remappings.values()
+#         for k in keys:
+#             b.unset(k)

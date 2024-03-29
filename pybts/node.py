@@ -90,7 +90,7 @@ class Parallel(py_trees.composites.Parallel, Composite):
             'policy'     : self.policy.__class__.__name__,
             'synchronise': self.policy.synchronise
         }
-
+    
 
 class Selector(py_trees.composites.Selector, Composite):
     def __init__(

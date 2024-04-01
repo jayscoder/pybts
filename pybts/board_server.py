@@ -260,12 +260,19 @@ class BoardServer:
             'total'   : pybts_data['id']
         })
 
+
+def directory_type(path):
+    if not os.path.isdir(path):
+        raise argparse.ArgumentTypeError(f"{path} is not a valid directory")
+    return path
+
+
 def main():
     # 创建 ArgumentParser 对象
     parser = argparse.ArgumentParser(description="A simple program to demonstrate argparse")
 
     # 添加选项标志
-    parser.add_argument("--dir", help="Path to the log directory", required=True)
+    parser.add_argument("--dir", type=directory_type, help="Path to the log directory", required=True)
     # 添加debug参数
     parser.add_argument("--debug", action="store_true", help="Enable debug mode")
     # 添加host参数

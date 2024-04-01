@@ -1,3 +1,4 @@
+from typing import Union, List, Optional
 import json
 from flask import (
     Flask, send_from_directory, jsonify, request,
@@ -7,11 +8,15 @@ from pybts import utility
 import os
 import argparse
 import yaml
+import datetime
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
 STATIC_DIR = os.path.join(TEMPLATES_DIR, 'static')
 
+
+# TODO: 正在运行的项目要有UI展示
+# TODO: 项目名称过长的话要有相应的处理（加tooltip）
 
 class BoardServer:
 
@@ -67,6 +72,9 @@ class BoardServer:
             "series" : [
                 {
                     "type"                   : "tree",
+                    # 'type'                   : 'graph',
+                    'layout'                 : 'orthogonal',
+                    "orient"                 : 'vertical',
                     "id"                     : 0,
                     "name"                   : '',
                     "data"                   : [],
@@ -76,7 +84,8 @@ class BoardServer:
                     "right"                  : "10%",
                     "edgeShape"              : "polyline",
                     "edgeForkPosition"       : "63%",
-                    "initialTreeDepth"       : 3,
+                    "initialTreeDepth"       : -1,
+                    # "layout"                 : 'radial',
                     "lineStyle"              : {
                         "width": 2,
                     },
@@ -137,13 +146,21 @@ class BoardServer:
         projects = []
         if not os.path.exists(self.log_dir):
             return []
-        for filename in os.listdir(self.log_dir):
-            filepath = os.path.join(self.log_dir, filename)
-            if not os.path.isdir(filepath):
-                continue
-            bt_path = os.path.join(filepath, 'pybts.json')
-            if os.path.exists(bt_path):
-                projects.append(filename)
+
+        for dirpath, dirnames, filenames in os.walk(self.log_dir):
+            if 'pybts.json' in filenames:
+                relative_path = os.path.relpath(dirpath, self.log_dir)
+                pybts_data = self._get_pybts_data(project=relative_path)
+                if pybts_data is None:
+                    continue
+                server_data = self._get_server_data(project=relative_path) or { }
+
+                projects.append({
+                    'name'  : relative_path,
+                    'unread': pybts_data.get('id') - server_data.get('last_read_id', 0),
+                    'total' : pybts_data['id']
+                })
+
         return projects
 
     def get_config(self):
@@ -157,64 +174,91 @@ class BoardServer:
     def get_option(self):
         return jsonify(self.option)
 
-    # def get_history(self, project) -> list[str]:
-    #     history_path = os.path.join(self.log_dir, project, 'pybts-history')
-    #     if not os.path.exists(history_path):
-    #         return []
-    #
-    #     history_names = []
-    #     for filename in os.listdir(history_path):
-    #         if filename.endswith('.json'):
-    #             history_names.append(filename.removesuffix('.json'))
-    #     history_names = sorted(history_names, key=lambda x: [int(part) for part in x.split('-')])
-    #     return history_names
-
     def get_xml_data(self):
         project = request.args.get('project') or ''
         track_id = request.args.get('id') or ''
-        log_data = self._get_log_data(project=project, track_id=track_id)
+        if track_id == '':
+            pybts_data = self._get_pybts_data(project=project)
+            track_id = pybts_data['id']
+        track_id = int(track_id)
+        log_data = self._get_history_data(project=project, track_id=track_id)
         if log_data is None:
             return jsonify({ 'error': f'project {project}: {track_id} not exist' }), 500
 
         xml_data = utility.bt_to_xml(log_data['tree'])
         return Response(xml_data, mimetype='application/xml')
 
-    def _get_log_data(self, project, track_id):
-        if track_id == '':
-            filepath = os.path.join(self.log_dir, project, 'pybts.json')
-        else:
-            filepath = os.path.join(self.log_dir, project, 'pybts-history', f'{track_id}.json')
+    def _get_pybts_data(self, project: str) -> Optional[dict]:
+        """当前track的信息"""
+        filepath = os.path.join(self.log_dir, project, 'pybts.json')
         if os.path.exists(filepath):
             with open(filepath, 'r') as f:
                 return json.load(f)
         return None
 
+    def _get_history_data(self, project: str, track_id: int) -> Optional[dict]:
+        filepath = os.path.join(self.log_dir, project, 'pybts-history', f'{track_id}.json')
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as f:
+                return json.load(f)
+        return None
+
+    def _get_server_data(self, project) -> dict:
+        json_data = { }
+        filepath = os.path.join(self.log_dir, project, 'pybts-server.json')
+        if os.path.exists(filepath):
+            with open(filepath, 'r') as f:
+                json_data = json.load(f)
+        return json_data
+
+    def _write_server_data(self, project, json_data):
+        filepath = os.path.join(self.log_dir, project, 'pybts-server.json')
+        old_data = self._get_server_data(project)
+        new_data = {
+            **old_data,
+            **json_data
+        }
+        with open(filepath, 'w') as f:
+            utility.json_dump(new_data, f, ensure_ascii=False)
+
     def get_echarts_data(self):
         project = request.args.get('project') or ''
         track_id = request.args.get('id')
-        log_data = self._get_log_data(project=project, track_id=track_id)
-        current_data = log_data
-        if track_id != '':
-            current_data = self._get_log_data(project=project, track_id='')
-        if log_data is None or current_data is None:
+        pybts_data = self._get_pybts_data(project=project)
+        if pybts_data is None:
+            print(f'project {project}: {track_id} not exist')
+            return jsonify({ 'error': f'project {project}: {track_id} not exist' }), 500
+        if track_id == '':
+            track_id = pybts_data['id']
+        track_id = int(track_id)
+
+        log_data = self._get_history_data(project=project, track_id=track_id)
+        if log_data is None:
+            print(f'project {project}: {track_id} not exist')
             return jsonify({ 'error': f'project {project}: {track_id} not exist' }), 500
 
         tree_data = utility.bt_to_echarts_json(log_data['tree'])
 
-        subtitle = ''
-        if 'info' in log_data and log_data['info'] is not None:
-            subtitle = yaml.dump(log_data['info'], allow_unicode=True)
+        del log_data['tree']
+        if log_data['info'] is None:
+            del log_data['info']
+
+        # 时间戳格式化
+        log_data['time'] = datetime.datetime.fromtimestamp(log_data['time'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
+        subtitle = yaml.dump(log_data, allow_unicode=True)
+
+        self._write_server_data(project=project, json_data={
+            'last_read_id': track_id
+        })
 
         return jsonify({
             'tree'    : tree_data,
             'subtitle': subtitle,
-            'title'   : f"{project}  {log_data['stage']} / {log_data['id']}",
+            'title'   : f"{project}  {log_data['round']}-{log_data['step']} / {log_data['id']}",
             'id'      : log_data['id'],
-            'stage'   : log_data['stage'],
             'page'    : log_data['id'],
-            'total'   : current_data['id']
+            'total'   : pybts_data['id']
         })
-
 
 def main():
     # 创建 ArgumentParser 对象

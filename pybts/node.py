@@ -1,21 +1,48 @@
 from __future__ import annotations
 from abc import ABC
 from queue import Queue
+
+from py_trees import behaviour, common
+from py_trees.behaviour import Behaviour
+
 from pybts.constants import *
 import typing
 import py_trees
+import itertools
 
 
 class Node(py_trees.behaviour.Behaviour, ABC):
     """
     Base class for all nodes in the behavior tree
+
+    被唤起的生命周期：
+    如果被tick到了
+
+    状态为RUNNING
+
+    - initialise
+    - update
+
+    如果update之后状态从RUNNING变更为SUCCESS/FAILURE/INVALID
+    - stop
+
+    下一次tick的时候状态一开始是RUNNING，则直接调用
+    update
+
     """
 
     def __init__(self, name: str = ''):
         super().__init__(name=name or self.__class__.__name__)
+        self._terminate_count = 0
+        self._update_count = 0
+        self._tick_count = 0
+        self._initialise_count = 0
+        self._reset_count = 0
 
     def reset(self):
-        pass
+        self._reset_count += 1
+        if self.status != Status.INVALID:
+            self.stop(Status.INVALID)
 
     @classmethod
     def creator(cls, d: dict, c: list):
@@ -23,206 +50,84 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 
     def to_data(self):
         # 在board上查看的信息
-        return { }
-
-    def update(self) -> Status:
-        return Status.INVALID
-
-
-class Composite(py_trees.composites.Composite, Node, ABC):
-    """
-    composite base class node
-    """
-
-    def __init__(
-            self,
-            name: str = 'Composite',
-            children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
-    ):
-        super().__init__(name=name, children=children)
-
-
-class Decorator(py_trees.decorators.Decorator, Node, ABC):
-    """
-    decorator base class node
-    """
-
-    def __init__(self, child: py_trees.behaviour.Behaviour, name: str = 'Decorator'):
-        super().__init__(name=name, child=child)
-
-
-class Sequence(py_trees.composites.Sequence, Composite):
-    """
-    sequence base class node
-    """
-
-    def __init__(
-            self,
-            name: str = 'Sequence',
-            memory: bool = True,
-            children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
-    ):
-        super().__init__(name=name, memory=memory, children=children)
-
-    @classmethod
-    def creator(cls, d: dict, c: list):
-        return cls(name=d['name'], memory=bool(d.get('memory', True)), children=c)
-
-    def to_data(self):
         return {
-            'memory': self.memory
+            '_reset_count'     : self._reset_count,
+            '_initialise_count': self._initialise_count,
+            '_tick_count'      : self._tick_count,
+            '_update_count'    : self._update_count,
+            '_terminate_count' : self._terminate_count
         }
 
+    def update(self) -> Status:
+        self.logger.debug("%s.update()" % (self.__class__.__name__))
+        self._update_count += 1
+        return Status.INVALID
 
-class Parallel(Composite):
-    """
-    A parallel ticks every child every time the parallel is itself ticked.
-    """
+    def tick(self) -> typing.Iterator[Behaviour]:
+        self._tick_count += 1
+        self.logger.debug("%s.tick()" % (self.__class__.__name__))
 
-    def __init__(
-            self,
-            name: str = 'Parallel',
-            success_threshold: int = 1,  # 成功的节点个数（大于等于这个数量才会认为并行节点成功，-1表示全部）
-            children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
-    ):
-        super().__init__(name=name, children=children)
-        self.success_threshold = success_threshold
-        assert self.success_threshold >= -1, "success_threshold is not valid"
-
-    @classmethod
-    def creator(cls, d: dict, c: list):
-        return cls(name=d['name'],
-                   success_threshold=int(d.get('success_threshold', 1)),
-                   children=c)
-
-    def tick(self) -> typing.Iterator[py_trees.behaviour.Behaviour]:
-        """
-        Tick over the children.
-
-        Yields:
-            :class:`~py_trees.behaviour.Behaviour`: a reference to itself or one of its children
-
-        Raises:
-            RuntimeError: if the policy configuration was invalid
-        """
-        self.logger.debug("%s.tick()" % self.__class__.__name__)
-
-        # reset
         if self.status != Status.RUNNING:
-            self.logger.debug("%s.tick(): re-initialising" % self.__class__.__name__)
-            for child in self.children:
-                # reset the children, this ensures old SUCCESS/FAILURE status flags
-                # don't break the synchronisation logic below
-                if child.status != Status.INVALID:
-                    child.stop(Status.INVALID)
-            self.current_child = None
-            # subclass (user) handling
+            # 开始的状态不是RUNNING
             self.initialise()
 
-        # nothing to do
-        if not self.children:
-            self.current_child = None
-            self.stop(Status.SUCCESS)
-            yield self
-            return
+        # don't set self.status yet, terminate() may need to check what the current state is first
+        new_status = self.update()
 
-        # process them all first
-        for child in self.children:
-            for node in child.tick():
-                yield node
-
-        # determine new status
-        new_status = Status.RUNNING
-        self.current_child = self.children[-1]
-        successful = [
-            child
-            for child in self.children
-            if child.status == Status.SUCCESS
-        ]
-        threshold = self.success_threshold
-        if threshold == -1:
-            threshold = len(self.children)
-
-        if len(successful) >= threshold:
-            new_status = Status.SUCCESS
-        else:
-            new_status = Status.FAILURE
-        # this parallel may have children that are still running
-        # so if the parallel itself has reached a final status, then
-        # these running children need to be terminated so they don't dangle
         if new_status != Status.RUNNING:
             self.stop(new_status)
+
         self.status = new_status
         yield self
 
-    def stop(self, new_status: Status = Status.INVALID) -> None:
+    def stop(self, new_status: Status) -> None:
         """
-        Ensure that any running children are stopped.
+        Stop the behaviour with the specified status.
 
         Args:
-            new_status : the composite is transitioning to this new status
+            new_status: the behaviour is transitioning to this new status
+
+        This is called to bring the current round of activity for the behaviour to completion, typically
+        resulting in a final status of :data:`~py_trees.common.Status.SUCCESS`,
+        :data:`~py_trees.common.Status.FAILURE` or :data:`~py_trees.common.Status.INVALID`.
+
+        .. warning::
+           Users should not override this method to provide custom termination behaviour. The
+           :meth:`~py_trees.behaviour.Behaviour.terminate` method has been provided for that purpose.
         """
         self.logger.debug(
-                f"{self.__class__.__name__}.stop()[{self.status}->{new_status}]"
+                "%s.stop(%s)"
+                % (
+                    self.__class__.__name__,
+                    "%s->%s" % (self.status, new_status)
+                )
         )
+        self.terminate(new_status)
+        self.status = new_status
+        self.iterator = self.tick()
 
-        # clean up dangling (running) children
-        for child in self.children:
-            if child.status == Status.RUNNING:
-                # this unfortunately knocks out it's running status for introspection
-                # but logically is the correct thing to do, see #132.
-                child.stop(Status.INVALID)
-        Composite.stop(self, new_status)
+    def terminate(self, new_status: common.Status) -> None:
+        super().terminate(new_status)
+        self.logger.debug(
+                "%s.terminate(%s)"
+                % (
+                    self.__class__.__name__,
+                    "%s->%s" % (self.status, new_status)
+                )
+        )
+        self._terminate_count += 1
 
-    def to_data(self):
-        return {
-            'success_threshold': self.success_threshold
-        }
+    def initialise(self) -> None:
+        super().initialise()
+        self.logger.debug("%s.initialise()" % (self.__class__.__name__))
+        self._initialise_count += 1
 
-
-class Selector(py_trees.composites.Selector, Composite):
-    """
-    Selectors are the decision makers.
-    A selector executes each of its child behaviours in turn until one of them succeeds
-    """
-
-    def __init__(
-            self,
-            name: str = 'Selector',
-            memory: bool = True,
-            children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
-    ):
-        super().__init__(name=name, memory=memory, children=children)
-        self.memory = memory
-
-    @classmethod
-    def creator(cls, d: dict, c: list):
-        return cls(name=d['name'], memory=bool(d.get('memory', True)), children=c)
-
-    def to_data(self):
-        return {
-            'memory': self.memory
-        }
-
-
-class Inverter(py_trees.decorators.Inverter, Decorator):
-    """A decorator that inverts the result of a class's update function."""
-
-    def __init__(self, child: py_trees.behaviour.Behaviour, name: str = 'Inverter'):
-        super().__init__(name=name, child=child)
-
-    @classmethod
-    def creator(cls, d: dict, c: list):
-        return cls(name=d['name'], child=c[0])
 
 
 class Action(Node, ABC):
     """
     行为节点
     """
-    meta = {
-        'desc': '行为节点'
-    }
 
     def __init__(self, name: str = ''):
         super().__init__(name=name)
@@ -231,16 +136,45 @@ class Action(Node, ABC):
     def to_data(self):
         from pybts.utility import read_queue_without_destroying
         actions = read_queue_without_destroying(self.actions)
-        return { 'actions': [str(act) for act in actions] }
+        return {
+            **super().to_data(),
+            'actions': [str(act) for act in actions]
+        }
 
 
 class Condition(Node, ABC):
     """
     条件节点
     """
-    meta = {
-        'desc': '条件节点'
-    }
+    pass
 
-    def __init__(self, name: str = ''):
-        super().__init__(name=name)
+
+class Success(Condition):
+    """
+    成功节点
+    """
+
+    def update(self) -> Status:
+        super().update()
+        return Status.SUCCESS
+
+    def stop(self, new_status: common.Status) -> None:
+        super().stop(new_status)
+
+
+class Failure(Condition):
+    """
+    失败节点
+    """
+
+    def update(self) -> Status:
+        super().update()
+        return Status.FAILURE
+
+
+class Running(Condition):
+    """Running Node"""
+
+    def update(self) -> Status:
+        super().update()
+        return Status.RUNNING

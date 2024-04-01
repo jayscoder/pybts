@@ -1,9 +1,10 @@
+import json
 import os
+import time
 import typing
 
 from pybts import utility
 from pybts.tree import Tree
-import jsonpickle
 
 
 class Board:
@@ -26,17 +27,23 @@ class Board:
             'id'   : self.track_id,
             'step' : self.tree.count,
             'round': self.tree.round,
-            'stage': f'{self.tree.round}-{self.tree.count}',
             'info' : info,
-            'tree' : utility.bt_to_json(self.tree.root),
+            'time' : int(time.time() * 1000)  # ms时间戳
         }
 
-        json_text = jsonpickle.dumps(json_data, indent=4)
         history_path = os.path.join(self.history_dir, f'{self.track_id}.json')
         with open(history_path, 'w') as f:
-            f.write(json_text)
+            tree_data = utility.bt_to_json(self.tree.root)
+            try:
+                utility.json_dump({
+                    **json_data,
+                    'tree': tree_data
+                }, f, ensure_ascii=False)
+            except Exception as e:
+                print(e)
+                raise e
         with open(self.current_path, 'w') as f:
-            f.write(json_text)
+            utility.json_dump(json_data, f, ensure_ascii=False)
 
     def clear(self):
         self.track_id = 0
@@ -56,7 +63,5 @@ class Board:
                 if filename.endswith('.json'):
                     filepath = os.path.join(self.history_dir, filename)
                     with open(filepath, 'r', encoding='utf') as f:
-                        json_data = jsonpickle.loads(f.read())
+                        json_data = utility.json_loads(f.read())
                         yield json_data
-
-

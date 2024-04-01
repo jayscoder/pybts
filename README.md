@@ -107,12 +107,13 @@ pybts --dir=logs --debug --host=localhost --port=10000
 
 After running the appropriate command, you can open a web browser and navigate to `http://localhost:10000` to view and interact with the behavior tree visualizations and management tools provided by pybts.
 
-![image-20240329031220580](README.assets/image-20240329031220580.png)
+![DEMO_Sequence  10-10 _ 100](README.assets/DEMO_Sequence%20%2010-10%20_%20100.png)
 
-![image-20240329031233459](README.assets/image-20240329031233459.png)
+![image-20240401211609525](README.assets/image-20240401211609525.png)
 
 
 
+![image-20240401211552611](README.assets/image-20240401211552611.png)
 
 
 ## Acknowledgements

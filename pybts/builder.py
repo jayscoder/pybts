@@ -4,8 +4,10 @@ import json
 from typing import Callable
 import xml.etree.ElementTree as ET
 import copy
-from pybts.node import *
 from pybts.constants import *
+from pybts.node import *
+from pybts.composites import *
+from pybts.decorators import *
 import uuid
 
 
@@ -13,6 +15,7 @@ class Builder:
     def __init__(self):
         self.repo = { }
         self.repo_desc = { }  # 仓库的描述
+        self.repo_node = { }  # 注册的bt节点
         self.register_default()
 
     def register(self, name: str | list[str], creator: Callable[[dict, [Node]], Node], desc: str = ''):
@@ -28,6 +31,7 @@ class Builder:
 
     def register_bt(self, *nodes: Node.__class__):
         for node in nodes:
+            self.repo_node[node.__name__] = node
             self.register(node.__name__, node.creator, desc=node.__doc__ or node.__name__)
             module_name = f'{node.__module__}.{node.__name__}'
             self.register(module_name, node.creator)
@@ -75,7 +79,30 @@ class Builder:
         return node
 
     def register_default(self):
-        self.register_bt(Sequence, Parallel, Selector, Inverter)
+        self.register_bt(
+                Sequence,
+                SequenceWithMemory,
+                ReactiveSequence,
+                Parallel,
+                ReactiveSelector,
+                Selector,
+                ReactiveSelector,
+                SelectorWithMemory,
+                ConditionBranch,
+        )
+
+        self.register_bt(
+                Inverter,
+                RunningUntilCondition,
+                OneShot,
+                Count,
+                RunningIsFailure,
+                RunningIsSuccess,
+                FailureIsSuccess,
+                FailureIsRunning,
+                SuccessIsFailure,
+                SuccessIsRunning,
+        )
 
 
 if __name__ == '__main__':

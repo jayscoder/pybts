@@ -47,10 +47,10 @@ class Board:
 
     def clear(self):
         self.track_id = 0
-        if os.path.exists(self.history_dir):
-            utility.delete_folder_contents(self.history_dir)
         if os.path.exists(self.current_path):
             os.remove(self.current_path)
+        if os.path.exists(self.history_dir):
+            utility.delete_folder_contents(self.history_dir)
 
     def iterate(self) -> typing.Iterator[dict]:
         # 遍历所有的历史数据

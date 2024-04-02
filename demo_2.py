@@ -1,5 +1,6 @@
 import logging
 import time
+import typing
 
 import py_trees
 from py_trees import common
@@ -16,9 +17,11 @@ class ToggleStatus(pybts.Condition):
         self.terminate_count = 0
         self.status_list = status_list
 
-    def update(self) -> Status:
-        self.update_count += 1
-        return self.status_list[(self.update_count - 1) % len(self.status_list)]
+    def updater(self) -> typing.Iterator[Status]:
+        self.update_count = 0
+        while True:
+            yield self.status_list[self.update_count]
+            self.update_count = (self.update_count + 1) % len(self.status_list)
 
     def to_data(self):
         return {

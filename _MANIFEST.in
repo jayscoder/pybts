@@ -2,3 +2,4 @@ recursive-include pybts/templates/static *
 recursive-include pybts/templates *
 include requirements.txt
 include README.md
+recursive-include README.assets *

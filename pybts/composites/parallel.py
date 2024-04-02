@@ -48,7 +48,7 @@ class Parallel(Composite):
             - RUNNING 状态的子节点在下一次tick时会继续执行，非RUNNING状态的子节点在下一次tick时会重置并重新开始
             - success_threshold 设置为 -1 表示所有子节点都必须成功才算总体成功
             """
-        self._tick_count += 1
+        self._debug_info['tick_count'] += 1
         self.logger.debug("%s.tick()" % (self.__class__.__name__))
 
         self.current_child = None

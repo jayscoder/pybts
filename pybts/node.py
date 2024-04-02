@@ -34,7 +34,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     def __init__(self, name: str = ''):
         super().__init__(name=name or self.__class__.__name__)
         self._updater_iter = None
-        self._debug_info = {
+        self.debug_info = {
             'tick_count'      : 0,
             'update_count'    : 0,
             'reset_count'     : 0,
@@ -43,7 +43,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         }
 
     def reset(self):
-        self._debug_info['reset_count'] += 1
+        self.debug_info['reset_count'] += 1
         self._updater_iter = None
         if self.status != Status.INVALID:
             self.stop(Status.INVALID)
@@ -55,12 +55,12 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     def to_data(self):
         # 在board上查看的信息
         return {
-            '_debug_info': self._debug_info,
+            'debug_info': self.debug_info,
         }
 
     def update(self) -> Status:
         self.logger.debug("%s.update()" % (self.__class__.__name__))
-        self._debug_info['update_count'] += 1
+        self.debug_info['update_count'] += 1
         if self._updater_iter is None:
             self._updater_iter = self.updater()
         new_status = Status.INVALID
@@ -73,11 +73,14 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         return new_status
 
     def updater(self) -> typing.Iterator[Status]:
+        # 提出Status.RUNNING/Status.SUCCESS/Status.FAILURE 会继续运行该迭代器
+        # 提出Status.INVALID会停止该迭代器
+
         yield Status.INVALID
         return
 
     def tick(self) -> typing.Iterator[Behaviour]:
-        self._debug_info['tick_count'] += 1
+        self.debug_info['tick_count'] += 1
         self.logger.debug("%s.tick()" % (self.__class__.__name__))
 
         if self.status != Status.RUNNING:
@@ -118,6 +121,8 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         self.terminate(new_status)
         self.status = new_status
         self.iterator = self.tick()
+        if new_status == Status.INVALID:
+            self._updater_iter = None  # 停止updater
 
     def terminate(self, new_status: common.Status) -> None:
         super().terminate(new_status)
@@ -128,12 +133,12 @@ class Node(py_trees.behaviour.Behaviour, ABC):
                     "%s->%s" % (self.status, new_status)
                 )
         )
-        self._debug_info['terminate_count'] += 1
+        self.debug_info['terminate_count'] += 1
 
     def initialise(self) -> None:
         super().initialise()
         self.logger.debug("%s.initialise()" % (self.__class__.__name__))
-        self._debug_info['initialise_count'] += 1
+        self.debug_info['initialise_count'] += 1
 
 
 class Action(Node, ABC):

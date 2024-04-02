@@ -1,3 +1,5 @@
+import shutil
+
 import pybts
 import argparse
 import os
@@ -25,8 +27,18 @@ def main():
     # 添加-v, --version参数获取version
     parser.add_argument('-v', '--version', action='version', version=f'pybts {pybts.__version__}')
 
+    parser.add_argument('--clear', action='store_true', help='Clear the log directory')
+
     # 解析命令行参数
     args = parser.parse_args()
+
+    if args.clear:
+        from pybts import utility
+        import tqdm
+        for project in tqdm.tqdm(utility.extract_project_path_list(args.dir)):
+            utility.clear_project(args.dir, project)
+            print(f'Successful cleared {args.dir}: {project}')
+        return
 
     server = pybts.board_server.BoardServer(log_dir=args.dir, debug=args.debug, host=args.host, port=args.port)
     server.run()

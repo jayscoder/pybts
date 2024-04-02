@@ -10,7 +10,8 @@ from pybts.tree import Tree
 class Board:
     def __init__(self, tree: Tree, log_dir: str = '.'):
         self.tree = tree
-        self.log_dir = os.path.join(log_dir, tree.name)
+        self.project = tree.name
+        self.log_dir = os.path.join(log_dir, self.project)
         self.history_dir = os.path.join(self.log_dir, 'pybts-history')
         self.current_path = os.path.join(self.log_dir, 'pybts.json')
         os.makedirs(self.history_dir, exist_ok=True)
@@ -47,10 +48,7 @@ class Board:
 
     def clear(self):
         self.track_id = 0
-        if os.path.exists(self.current_path):
-            os.remove(self.current_path)
-        if os.path.exists(self.history_dir):
-            utility.delete_folder_contents(self.history_dir)
+        utility.clear_project(self.log_dir, self.tree.name)
 
     def iterate(self) -> typing.Iterator[dict]:
         # 遍历所有的历史数据

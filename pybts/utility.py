@@ -163,27 +163,20 @@ def blackboards_to_json(*blackboards: py_trees.blackboard.Client) -> dict:
 class PYBTJsonEncoder(json.JSONEncoder):
     def default(self, obj):
         import datetime
-        import numpy as np
         import enum
         import uuid
+
+        try:
+            return super().default(obj)
+        except TypeError:
+            pass
+
         if isinstance(obj, datetime.date):
             return obj.isoformat()
-        elif isinstance(obj, np.integer):
-            return int(obj)
-        elif isinstance(obj, np.floating):
-            return float(obj)
-        elif isinstance(obj, np.ndarray):
-            return obj.tolist()
-        elif isinstance(obj, np.bool_):
-            return bool(obj)
-        elif isinstance(obj, np.str_):
-            return str(obj)
         elif isinstance(obj, enum.Enum):
             return obj.value
         elif isinstance(obj, tuple):
             return list(obj)  # Convert tuple to list
-        elif isinstance(obj, np.unicode_):
-            return str(obj)
         elif isinstance(obj, uuid.UUID):
             return obj.hex  # Convert UUID to string
         elif isinstance(obj, set):
@@ -192,24 +185,62 @@ class PYBTJsonEncoder(json.JSONEncoder):
             return obj.value
         else:
             try:
-                return super().default(obj)
-            except TypeError:
-                return str(obj)
+                import numpy as np
+                if isinstance(obj, np.integer):
+                    return int(obj)
+                elif isinstance(obj, np.floating):
+                    return float(obj)
+                elif isinstance(obj, np.ndarray):
+                    return obj.tolist()
+                elif isinstance(obj, np.bool_):
+                    return bool(obj)
+                elif isinstance(obj, np.str_):
+                    return str(obj)
+                elif isinstance(obj, enum.Enum):
+                    return obj.value
+                elif isinstance(obj, tuple):
+                    return list(obj)  # Convert tuple to list
+                elif isinstance(obj, np.unicode_):
+                    return str(obj)
+            except:
+                pass
+            return str(obj)
 
 
 def json_dumps(json_data, indent=4, sort_keys=False, ensure_ascii=True, **kwargs):
     return json.dumps(json_data, cls=PYBTJsonEncoder, indent=indent, sort_keys=sort_keys, ensure_ascii=ensure_ascii,
                       **kwargs)
 
+
 def json_dump(json_data, fp, indent=4, sort_keys=False, ensure_ascii=True, **kwargs):
     return json.dump(json_data, fp, cls=PYBTJsonEncoder, indent=indent, sort_keys=sort_keys, ensure_ascii=ensure_ascii,
-                      **kwargs)
+                     **kwargs)
+
 
 def json_loads(s, **kwargs):
     return json.loads(s, **kwargs)
+
 
 # def clear_blackboards(*blackboards: py_trees.blackboard.Client):
 #     for b in blackboards:
 #         keys = b.remappings.values()
 #         for k in keys:
 #             b.unset(k)
+
+def extract_project_path_list(log_dir: str) -> [str]:
+    """提取出项目列表"""
+    projects = []
+    for dirpath, dirnames, filenames in os.walk(log_dir):
+        if 'pybts.json' in filenames:
+            relative_path = os.path.relpath(dirpath, log_dir)
+            projects.append(relative_path)
+    return projects
+
+
+def clear_project(log_dir: str, project: str):
+    current_path = os.path.join(log_dir, project, 'pybts.json')
+    if os.path.exists(current_path):
+        os.remove(current_path)
+    history_dir = os.path.join(log_dir, project, 'history')
+    if os.path.exists(history_dir):
+        delete_folder_contents(history_dir)

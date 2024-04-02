@@ -39,6 +39,7 @@ class BoardServer:
         self.app.add_url_rule("/", view_func=self.index, defaults={ 'path': '' }, methods=['GET'])
         self.app.add_url_rule("/<path:path>", view_func=self.index, methods=['GET'])
 
+        self.last_read_id = 0
         self.option = {
             "title"  : {
                 "text"   : "PYBT",
@@ -92,10 +93,11 @@ class BoardServer:
                     "roam"                   : True,
                     "label"                  : {
                         "backgroundColor": "#fff",
-                        "position"       : "left",
+                        "position"       : "bottom",
+                        'distance'       : 10,
                         "verticalAlign"  : "middle",
-                        "align"          : "right",
-                        "fontSize"       : 14
+                        "align"          : "center",
+                        "fontSize"       : 15
                     },
                     "leaves"                 : {
                         "label": {
@@ -153,11 +155,10 @@ class BoardServer:
                 pybts_data = self._get_pybts_data(project=relative_path)
                 if pybts_data is None:
                     continue
-                server_data = self._get_server_data(project=relative_path) or { }
 
                 projects.append({
                     'name'  : relative_path,
-                    'unread': pybts_data.get('id') - server_data.get('last_read_id', 0),
+                    'unread': pybts_data.get('id') - self.last_read_id,
                     'total' : pybts_data['id']
                 })
 
@@ -203,24 +204,6 @@ class BoardServer:
                 return json.load(f)
         return None
 
-    def _get_server_data(self, project) -> dict:
-        json_data = { }
-        filepath = os.path.join(self.log_dir, project, 'pybts-server.json')
-        if os.path.exists(filepath):
-            with open(filepath, 'r') as f:
-                json_data = json.load(f)
-        return json_data
-
-    def _write_server_data(self, project, json_data):
-        filepath = os.path.join(self.log_dir, project, 'pybts-server.json')
-        old_data = self._get_server_data(project)
-        new_data = {
-            **old_data,
-            **json_data
-        }
-        with open(filepath, 'w') as f:
-            utility.json_dump(new_data, f, ensure_ascii=False)
-
     def get_echarts_data(self):
         project = request.args.get('project') or ''
         track_id = request.args.get('id')
@@ -247,9 +230,7 @@ class BoardServer:
         log_data['time'] = datetime.datetime.fromtimestamp(log_data['time'] / 1000).strftime('%Y-%m-%d %H:%M:%S')
         subtitle = yaml.dump(log_data, allow_unicode=True)
 
-        self._write_server_data(project=project, json_data={
-            'last_read_id': track_id
-        })
+        self.last_read_id = track_id
 
         return jsonify({
             'tree'    : tree_data,
@@ -259,7 +240,3 @@ class BoardServer:
             'page'    : log_data['id'],
             'total'   : pybts_data['id']
         })
-
-
-
-

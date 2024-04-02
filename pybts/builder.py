@@ -58,7 +58,7 @@ class Builder:
         if isinstance(json_data, str):
             json_data = json.loads(json_data, encoding='utf-8')
         tag = json_data['tag']
-        assert tag in self.repo
+        assert tag in self.repo, f'Unsupported tag {tag}'
         creator = self.repo[tag]
         children = []
         if not ignore_children:

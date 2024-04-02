@@ -228,7 +228,7 @@ class Composite(Node, ABC):
 def _SEQ_SEL_tick(self: Composite, tick_again_status: list[Status], continue_status: list[Status],
                   no_child_status: Status):
     """Sequence/Selector的tick逻辑"""
-    self._debug_info['tick_count'] += 1
+    self.debug_info['tick_count'] += 1
     self.logger.debug("%s.tick()" % (self.__class__.__name__))
 
     if self.status in tick_again_status:

@@ -1,4 +1,2 @@
-import pybts
+import stable_baselines3
 
-if __name__ == '__main__':
-    print(pybts.__version__)

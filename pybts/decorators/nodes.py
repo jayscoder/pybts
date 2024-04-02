@@ -6,7 +6,7 @@ from py_trees.common import Status
 import typing
 
 
-class Decorator(py_trees.decorators.Decorator, Node, ABC):
+class Decorator(Node, ABC):
     """
     装饰节点
     只有一个子节点
@@ -133,7 +133,7 @@ class RunningUntilCondition(Decorator):
             child: the child to be decorated
             status: the desired status to watch for
         """
-        super(Condition, self).__init__(name=name, child=child)
+        super().__init__(name=name, child=child)
         if isinstance(status, str):
             status = Status(status)
         self.succeed_status = status

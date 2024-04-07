@@ -1,8 +1,8 @@
 import shutil
 
-import pybts
 import argparse
 import os
+import pybts
 
 
 def directory_type(path):
@@ -40,7 +40,7 @@ def main():
             print(f'Successful cleared {args.dir}: {project}')
         return
 
-    server = pybts.board_server.BoardServer(log_dir=args.dir, debug=args.debug, host=args.host, port=args.port)
+    server = pybts.board.Server(log_dir=args.dir, debug=args.debug, host=args.host, port=args.port)
     server.run()
 
 

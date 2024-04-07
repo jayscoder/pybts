@@ -1,11 +1,13 @@
 import typing
 
-import py_trees
 from py_trees import common, visitors
-from pybts.node import Node
+
+from pybts.tree import Tree
+import py_trees
+import gymnasium as gym
 
 
-class Tree(py_trees.trees.BehaviourTree):
+class RLTree(Tree):
     def __init__(self, root: py_trees.behaviour.Behaviour, name: str = ''):
         super().__init__(root=root)
         self.name = name or root.name
@@ -13,15 +15,10 @@ class Tree(py_trees.trees.BehaviourTree):
 
     def setup(
             self,
+            env: gym.Env,
             timeout: typing.Union[float, common.Duration] = common.Duration.INFINITE,
             visitor: typing.Optional[visitors.VisitorBase] = None,
-            **kwargs: any,
-    ) -> None:
-        super().setup(timeout=timeout, visitor=visitor, **kwargs)
+            **kwargs,
+    ):
+        super().setup(timeout=timeout, visitor=visitor, env=env, **kwargs)
 
-    def reset(self):
-        self.count = 0
-        self.round += 1
-        for node in self.root.iterate():
-            if isinstance(node, Node):
-                node.reset()

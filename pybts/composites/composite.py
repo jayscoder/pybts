@@ -225,8 +225,13 @@ class Composite(Node, ABC):
         return child.id
 
 
-def _SEQ_SEL_tick(self: Composite, tick_again_status: list[Status], continue_status: list[Status],
-                  no_child_status: Status):
+def SEQ_SEL_tick(
+        self: Composite,
+        tick_again_status: list[Status],
+        continue_status: list[Status],
+        no_child_status: Status,
+        start_index: int = 0
+):
     """Sequence/Selector的tick逻辑"""
     self.debug_info['tick_count'] += 1
     self.logger.debug("%s.tick()" % (self.__class__.__name__))
@@ -236,8 +241,8 @@ def _SEQ_SEL_tick(self: Composite, tick_again_status: list[Status], continue_sta
         assert self.current_child is not None
         index = self.children.index(self.current_child)
     else:
-        self.current_child = None
-        index = 0
+        self.current_child = None  # 从头执行
+        index = start_index
 
     for child in itertools.islice(self.children, index, None):
         self.current_child = child
@@ -263,4 +268,3 @@ def _SEQ_SEL_tick(self: Composite, tick_again_status: list[Status], continue_sta
 
     self.status = new_status
     yield self
-

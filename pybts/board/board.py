@@ -6,7 +6,6 @@ import typing
 from pybts import utility
 from pybts.tree import Tree
 
-
 class Board:
     def __init__(self, tree: Tree, log_dir: str = '.'):
         self.tree = tree

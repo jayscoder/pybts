@@ -18,7 +18,7 @@ STATIC_DIR = os.path.join(TEMPLATES_DIR, 'static')
 # TODO: 正在运行的项目要有UI展示
 # TODO: 项目名称过长的话要有相应的处理（加tooltip）
 
-class BoardServer:
+class Server:
 
     def __init__(self, title: str = 'PYBT', log_dir: str = '', update_interval: int = 0.5, debug: bool = False,
                  host: str = '0.0.0.0', port: int = 10000):
@@ -97,13 +97,18 @@ class BoardServer:
                         'distance'       : 10,
                         "verticalAlign"  : "middle",
                         "align"          : "center",
-                        "fontSize"       : 15
+                        "fontSize"       : 14,
+                        'overflow'       : 'breakAll'
                     },
                     "leaves"                 : {
                         "label": {
-                            "position"     : "right",
-                            "verticalAlign": "middle",
-                            "align"        : "left",
+                            "backgroundColor": "#fff",
+                            "position"       : "bottom",
+                            'distance'       : 10,
+                            "verticalAlign"  : "middle",
+                            "align"          : "center",
+                            "fontSize"       : 14,
+                            'overflow'       : 'breakAll'
                         },
                     },
                     "emphasis"               : {

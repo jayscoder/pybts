@@ -7,7 +7,7 @@ import typing
 from py_trees.common import Status
 from py_trees import behaviour
 import itertools
-from pybts.composites.composite import Composite, _SEQ_SEL_tick
+from pybts.composites.composite import Composite, SEQ_SEL_tick
 
 
 class ConditionBranch(Composite):

@@ -5,7 +5,7 @@ import typing
 from py_trees.common import Status
 from py_trees import behaviour
 import itertools
-from pybts.composites.composite import Composite, _SEQ_SEL_tick
+from pybts.composites.composite import Composite, SEQ_SEL_tick
 
 
 class Sequence(Composite):
@@ -19,10 +19,12 @@ class Sequence(Composite):
     """
 
     def tick(self) -> typing.Iterator[behaviour.Behaviour]:
-        return _SEQ_SEL_tick(self,
-                             tick_again_status=[Status.RUNNING],
-                             continue_status=[Status.SUCCESS],
-                             no_child_status=Status.SUCCESS)
+        return SEQ_SEL_tick(
+                self,
+                tick_again_status=[Status.RUNNING],
+                continue_status=[Status.SUCCESS],
+                no_child_status=Status.SUCCESS,
+                start_index=0)
 
 
 class SequenceWithMemory(Sequence):
@@ -36,11 +38,12 @@ class SequenceWithMemory(Sequence):
     """
 
     def tick(self) -> typing.Iterator[behaviour.Behaviour]:
-        return _SEQ_SEL_tick(
+        return SEQ_SEL_tick(
                 self,
                 tick_again_status=[Status.RUNNING, Status.FAILURE],
                 continue_status=[Status.SUCCESS],
-                no_child_status=Status.SUCCESS)
+                no_child_status=Status.SUCCESS,
+                start_index=0)
 
 
 class ReactiveSequence(Sequence):
@@ -56,10 +59,9 @@ class ReactiveSequence(Sequence):
     """
 
     def tick(self) -> typing.Iterator[behaviour.Behaviour]:
-        return _SEQ_SEL_tick(
+        return SEQ_SEL_tick(
                 self,
                 tick_again_status=[],
                 continue_status=[Status.SUCCESS],
-                no_child_status=Status.SUCCESS)
-
-
+                no_child_status=Status.SUCCESS,
+                start_index=0)

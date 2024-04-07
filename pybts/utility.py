@@ -244,3 +244,5 @@ def clear_project(log_dir: str, project: str):
     history_dir = os.path.join(log_dir, project, 'history')
     if os.path.exists(history_dir):
         delete_folder_contents(history_dir)
+
+

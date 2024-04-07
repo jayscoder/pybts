@@ -1,9 +1,9 @@
 import numpy as np
-import torch as th
 from gymnasium import spaces
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.utils import explained_variance, get_schedule_fn, safe_mean, obs_as_tensor
 import typing
+import torch as th
 
 
 def bt_on_policy_collect_rollouts(model: OnPolicyAlgorithm, last_obs) -> typing.Iterator:

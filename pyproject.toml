@@ -15,6 +15,9 @@ py-trees = "^2.2.3"
 jinja2 = "^3.1.3"
 flask = "^3.0.2"
 tqdm = "^4.66.2"
+gymnasium = {version = "^0.29.1", optional = true}
+torch = {version = "^2.2.2", optional = true}
+stable-baselines3 = {version = "^2.3.0", optional = true}
 
 [build-system]
 requires = ["poetry-core"]
@@ -22,3 +25,6 @@ build-backend = "poetry.core.masonry.api"
 
 [tool.poetry.scripts]
 pybts = 'pybts.main:main'
+
+[tool.poetry.extras]
+rl = ['gymnasium', 'torch', 'numpy', 'stable_baselines3']

@@ -9,16 +9,17 @@ from pybts.node import *
 from pybts.composites import *
 from pybts.decorators import *
 import uuid
+from pybts.utility import camel_case_to_snake_case
 
 
 class Builder:
-    def __init__(self):
-        self.repo = { }
+    def __init__(self, **kwargs):
+        self.repo = { }  # 注册节点的仓库
         self.repo_desc = { }  # 仓库的描述
-        self.repo_node = { }  # 注册的bt节点
         self.register_default()
+        self.kwargs = kwargs.copy()  # 全局参数
 
-    def register(self, name: str | list[str], creator: Callable[[dict, [Node]], Node], desc: str = ''):
+    def register(self, name: str | list[str], creator: Callable, desc: str = ''):
         if isinstance(name, str):
             name_list = name.split('|')
             for _name in name_list:
@@ -29,12 +30,15 @@ class Builder:
             for _name in name:
                 self.register(_name, creator, desc=desc)
 
-    def register_bt(self, *nodes: Node.__class__):
+    def register_node(self, *nodes: Node.__class__):
+        """
+        注册节点，注意节点的__init__传递的参数全部都是str类型，在内部要自己处理一下
+        """
         for node in nodes:
-            self.repo_node[node.__name__] = node
-            self.register(node.__name__, node.creator, desc=node.__doc__ or node.__name__)
+            self.register(node.__name__, node, desc=node.__doc__ or node.__name__)
+            self.register(camel_case_to_snake_case(node.__name__), node)
             module_name = f'{node.__module__}.{node.__name__}'
-            self.register(module_name, node.creator)
+            self.register(module_name, node)
 
     def build_from_file(self, filepath: str):
         with open(filepath, 'r') as f:
@@ -50,8 +54,10 @@ class Builder:
         if isinstance(xml_data, str):
             xml_data = ET.fromstring(xml_data)
         from pybts.utility import xml_to_json
-        return self.build_from_json(json_data=xml_to_json(xml_node=xml_data, ignore_children=ignore_children),
-                                    ignore_children=ignore_children)
+        return self.build_from_json(
+                json_data=xml_to_json(
+                        xml_node=xml_data, ignore_children=ignore_children),
+                ignore_children=ignore_children)
 
     def build_from_json(self, json_data: dict | str, ignore_children: bool = False) -> Node:
 
@@ -65,9 +71,21 @@ class Builder:
             children = [self.build_from_json(json_data=child, ignore_children=ignore_children) for child in
                         json_data['children']]
         data = copy.copy(json_data['data'])
-        if 'name' not in data:
-            data['name'] = json_data['tag']
-        node = creator(data, children)
+
+        # if 'name' not in data:
+        #     data['name'] = json_data['tag']
+
+        attrs = {
+            **self.kwargs,
+            **data,
+        }
+        try:
+            node = creator(**attrs, children=children)
+        except Exception as e:
+            print(creator, e)
+            raise e
+        node.attrs = attrs
+
         if BT_PRESET_DATA_KEY.ID in data and data[BT_PRESET_DATA_KEY.ID]:
             node.id = uuid.UUID(data[BT_PRESET_DATA_KEY.ID])
         if BT_PRESET_DATA_KEY.STATUS in data and data[BT_PRESET_DATA_KEY.STATUS]:
@@ -79,7 +97,7 @@ class Builder:
         return node
 
     def register_default(self):
-        self.register_bt(
+        self.register_node(
                 Sequence,
                 SequenceWithMemory,
                 ReactiveSequence,
@@ -89,15 +107,16 @@ class Builder:
                 ReactiveSelector,
                 SelectorWithMemory,
                 ConditionBranch,
+                Template
         )
 
-        self.register_bt(
+        self.register_node(
                 Failure,
                 Success,
-                Running
+                Running,
         )
 
-        self.register_bt(
+        self.register_node(
                 Inverter,
                 RunningUntilCondition,
                 OneShot,

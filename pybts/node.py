@@ -28,8 +28,9 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 
     下一次tick的时候状态一开始是RUNNING，则直接调用
     update
-
     """
+    attrs: typing.Dict[str, typing.AnyStr]  # 在builder和xml中传递的参数，会在__init__之后提供
+    context: typing.Optional[dict]  # 共享的字典，在setup的时候提供
 
     def __init__(self, name: str = '', **kwargs):
         super().__init__(name=name or self.__class__.__name__)
@@ -56,6 +57,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         # 在board上查看的信息
         return {
             'debug_info': self.debug_info,
+            'attrs'     : self.attrs
         }
 
     def update(self) -> Status:
@@ -141,10 +143,16 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         self.debug_info['initialise_count'] += 1
 
     def __str__(self):
+        attrs = {
+            'id': self.id.hex,
+            **self.attrs,
+        }
+
+        attrs_str = ' '.join([f'{k}="{attrs[k]}"' for k in attrs if isinstance(attrs[k], str) and attrs[k]])
         if len(self.children) == 0:
-            return f'<{self.name} id="{self.id.hex}"/>'
+            return f'<{self.name} {attrs_str}/>'
         else:
-            return f'<{self.name} id="{self.id.hex}"> {len(self.children)} </{self.name}>'
+            return f'<{self.name} {attrs_str}/>({len(self.children)})'
 
     def __repr__(self):
         return self.__str__()
@@ -155,8 +163,8 @@ class Action(Node, ABC):
     行为节点
     """
 
-    def __init__(self, name: str = '', **kwargs):
-        super().__init__(name=name, **kwargs)
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
         self.actions = Queue()
 
     def to_data(self):

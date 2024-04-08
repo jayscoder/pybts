@@ -6,10 +6,26 @@ from pybts.node import Node
 
 
 class Tree(py_trees.trees.BehaviourTree):
-    def __init__(self, root: py_trees.behaviour.Behaviour, name: str = ''):
+    def __init__(self, root: py_trees.behaviour.Behaviour, name: str = '', context: dict = None):
         super().__init__(root=root)
         self.name = name or root.name
-        self.round = 0  # 第几轮
+        self.reset_handlers: typing.List[
+            typing.Callable[["Tree"], None]
+        ] = []
+
+        self.context = {
+            'round': 0,
+            **(context or { }),
+        }  # 环境字典
+
+    @property
+    def round(self):
+        """第几轮"""
+        return self.context['round']
+
+    @round.setter
+    def round(self, value):
+        self.context['round'] = value
 
     def setup(
             self,
@@ -17,6 +33,8 @@ class Tree(py_trees.trees.BehaviourTree):
             visitor: typing.Optional[visitors.VisitorBase] = None,
             **kwargs: any,
     ) -> None:
+        for node in self.root.iterate():
+            node.context = self.context
         super().setup(timeout=timeout, visitor=visitor, **kwargs)
 
     def reset(self):
@@ -25,3 +43,8 @@ class Tree(py_trees.trees.BehaviourTree):
         for node in self.root.iterate():
             if isinstance(node, Node):
                 node.reset()
+        for handler in self.reset_handlers:
+            handler(self)
+
+    def add_reset_handler(self, handler: typing.Callable[["Tree"], None]):
+        self.reset_handlers.append(handler)

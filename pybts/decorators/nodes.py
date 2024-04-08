@@ -12,15 +12,11 @@ class Decorator(Node, ABC):
     只有一个子节点
     """
 
-    def __init__(self, child: py_trees.behaviour.Behaviour, **kwargs):
+    def __init__(self, children: list[py_trees.behaviour.Behaviour], **kwargs):
         # Checks
-        if not isinstance(child, py_trees.behaviour.Behaviour):
-            raise TypeError(
-                    "A decorator's child must be an instance of py_trees.behaviours.Behaviour"
-            )
         # Initialise
         super().__init__(**kwargs)
-        self.children.append(child)
+        self.children = children
         # Give a convenient alias
         self.decorated = self.children[0]
         self.decorated.parent = self
@@ -124,7 +120,7 @@ class RunningUntilCondition(Decorator):
     :data:`~py_trees.Status.SUCCESS` when the flip occurs.
     """
 
-    def __init__(self, child: py_trees.behaviour.Behaviour, status: str | Status, **kwargs):
+    def __init__(self, status: str | Status, **kwargs):
         """
         Initialise with child and optional name, status variables.
 
@@ -133,17 +129,10 @@ class RunningUntilCondition(Decorator):
             child: the child to be decorated
             status: the desired status to watch for
         """
-        super().__init__(child=child, **kwargs)
+        super().__init__(**kwargs)
         if isinstance(status, str):
             status = Status(status)
         self.succeed_status = status
-
-    @classmethod
-    def creator(cls, d: dict, c: list):
-        return cls(
-                child=c[0],
-                **d
-        )
 
     def to_data(self):
         return {
@@ -192,7 +181,7 @@ class OneShot(Decorator):
     """
 
     def __init__(
-            self, child: py_trees.behaviour.Behaviour, policy: str | list[Status] = 'SUCCESS', **kwargs
+            self, policy: str | list[Status] = 'SUCCESS', **kwargs
     ):
         """
         Init with the decorated child.
@@ -204,19 +193,12 @@ class OneShot(Decorator):
             - SUCCESS
             - SUCCESS|FAILURE
         """
-        super(OneShot, self).__init__(child=child, **kwargs)
+        super(OneShot, self).__init__(**kwargs)
         self.final_status: typing.Optional[Status] = None
         if isinstance(policy, str):
             self.policy = list(map(lambda x: Status(x), policy.split('|')))
         else:
             self.policy = policy
-
-    @classmethod
-    def creator(cls, d: dict, c: list):
-        return cls(
-                child=c[0],
-                **d
-        )
 
     def to_data(self):
         return {
@@ -294,7 +276,7 @@ class Count(Decorator):
         interrupt_count: number of times a higher priority has interrupted
     """
 
-    def __init__(self, child: py_trees.behaviour.Behaviour, name: str = '', **kwargs):
+    def __init__(self, **kwargs):
         """
         Init the counter.
 
@@ -302,7 +284,7 @@ class Count(Decorator):
             name: the decorator name
             child: the child behaviour or subtree
         """
-        super(Count, self).__init__(name=name, child=child, **kwargs)
+        super(Count, self).__init__(**kwargs)
         self.total_tick_count = 0
         self.failure_count = 0
         self.success_count = 0

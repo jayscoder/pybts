@@ -249,3 +249,12 @@ def clear_project(log_dir: str, project: str):
 
 def jinja2_render(template: str, context: dict) -> str:
     return jinja2.Template(template).render(context)
+
+
+def camel_case_to_snake_case(name):
+    """
+    驼峰转蛇形
+    :param name:
+    :return:
+    """
+    return ''.join(['_' + i.lower() if i.isupper() else i for i in name]).lstrip('_')

@@ -58,6 +58,7 @@ from pybts.node import Action
 from py_trees import common
 import time
 
+
 # Define custom behavior node
 class Person(Action):
   def __init__(self, name: str, age: int):
@@ -71,7 +72,9 @@ class Person(Action):
 
 # Build the behavior tree
 builder = builder.Builder()
-builder.register('Person', Person.creator)
+builder.register('Person', Person)
+# or
+builder.register_node(Person)  # will register tag 'Person' and 'person'(snake case)
 root = builder.build_from_file('demos/demo_bt.xml')
 tree = Tree(root=root, name='Person')
 

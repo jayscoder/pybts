@@ -29,7 +29,6 @@ class SelectorWithMemory(Selector):
     记忆选择节点
     - 当前执行节点返回 FAILURE/INVALID，继续执行后续节点
     - 当前执行节点返回 SUCCESS/RUNNING，停止执行后续节点，下次执行还是从这个节点开始
-    - 当前执行节点返回 SUCCESS，停止执行后续节点，下次执行从第一个节点开始
     返回最后一个执行节点的状态，如果没有孩子，则返回FAILURE
     """
 
@@ -58,3 +57,5 @@ class ReactiveSelector(Selector):
                 continue_status=[Status.FAILURE, Status.INVALID],
                 no_child_status=Status.FAILURE,
                 start_index=0)
+
+

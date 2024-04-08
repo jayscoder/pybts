@@ -189,9 +189,10 @@ class RLOnPolicyNode(ABC):
         self.rl_on_policy_collector = None
         self.rl_accum_reward = 0
         self.rl_info = None
-        self.rl_reward = 0 # 当前奖励
+        self.rl_reward = 0  # 当前奖励
         self.rl_obs = None
         self.rl_iteration = 0
+        self.rl_done = False
         self.rl_action = None
         self.rl_model: typing.Optional[OnPolicyAlgorithm] = None
 
@@ -232,6 +233,14 @@ class RLOnPolicyNode(ABC):
     def rl_gen_reward(self) -> float:
         raise NotImplemented
 
+    @abstractmethod
+    def rl_gen_done(self) -> bool:
+        # 返回当前环境是否结束
+        raise NotImplemented
+
+    def rl_device(self) -> str:
+        return 'cpu'
+
     def rl_take_action(self,
                        train: bool,
                        log_interval: int = 1,
@@ -243,7 +252,7 @@ class RLOnPolicyNode(ABC):
         info = self.rl_gen_info()
         reward = self.rl_gen_reward()
         obs = self.rl_gen_obs()
-
+        done = self.rl_gen_done()
         if train:
             try:
                 if self.rl_on_policy_collector is None:
@@ -253,8 +262,7 @@ class RLOnPolicyNode(ABC):
                     action = self.rl_on_policy_collector.send(None)
                 else:
                     info = info
-                    action = self.rl_on_policy_collector.send(
-                            (obs, reward, info['terminated'] or info['truncated'], info))
+                    action = self.rl_on_policy_collector.send((obs, reward, done, info))
             except StopIteration:
                 self.rl_on_policy_collector = None
                 self.rl_iteration += 1
@@ -276,6 +284,7 @@ class RLOnPolicyNode(ABC):
         self.rl_info = info
         self.rl_accum_reward += reward
         self.rl_action = action
+        self.rl_done = done
         return action
 
     def rl_ppo_setup_model(self,
@@ -284,8 +293,8 @@ class RLOnPolicyNode(ABC):
                            policy: str,
                            tensorboard_log: str = '',
                            verbose: int = 1,
-                           n_steps: int = 8,
-                           batch_size: int = 8,
+                           n_steps: int = 2048,
+                           batch_size: int = 64,
                            tb_log_name: str = ''
                            ):
         env = DummyEnv(
@@ -294,34 +303,40 @@ class RLOnPolicyNode(ABC):
                 observation_space=self.rl_observation_space())
         model: typing.Optional[OnPolicyAlgorithm] = None
 
-        if path != '':
-            try:
-                model = PPO.load(
-                        path=path,
-                        env=env,
-                        tensorboard_log=tensorboard_log,
-                        verbose=verbose,
-                        force_reset=False,
-                        n_steps=n_steps,
-                        batch_size=batch_size,
-                )
-            except:
-                pass
-        if model is None:
+        if train:
             model = PPO(
                     policy=policy,
                     env=env,
                     verbose=1,
                     tensorboard_log=tensorboard_log,
-                    n_steps=8,
-                    batch_size=8,
+                    n_steps=n_steps,
+                    batch_size=batch_size,
+                    device=self.rl_device()
+            )
+
+            if path != '':
+                model.set_parameters(
+                        load_path_or_dict=path,
+                        device=self.rl_device()
+                )
+        else:
+            assert path != '', f'No model path provided: {path}'
+            model = PPO.load(
+                    path=path,
+                    env=env,
+                    tensorboard_log=tensorboard_log,
+                    verbose=verbose,
+                    force_reset=False,
+                    n_steps=n_steps,
+                    batch_size=batch_size,
+                    device=self.rl_device()
             )
 
         if train:
             bt_on_policy_setup_learn(
                     model,
                     obs=self.rl_gen_obs(),
-                    tb_log_name=tb_log_name
+                    tb_log_name=tb_log_name,
             )
 
         self.rl_model = model

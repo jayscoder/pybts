@@ -10,7 +10,7 @@ import argparse
 import yaml
 import datetime
 
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 TEMPLATES_DIR = os.path.join(BASE_DIR, 'templates')
 STATIC_DIR = os.path.join(TEMPLATES_DIR, 'static')
 
@@ -20,10 +20,14 @@ STATIC_DIR = os.path.join(TEMPLATES_DIR, 'static')
 
 class Server:
 
-    def __init__(self, title: str = 'PYBT', log_dir: str = '', update_interval: int = 0.5, debug: bool = False,
+    def __init__(self,
+                 title: str = 'PYBT',
+                 log_dir: str = '',
+                 update_interval: int = 1,
+                 debug: bool = False,
                  host: str = '0.0.0.0', port: int = 10000):
         self.title = title
-        self.update_interval = update_interval  # 每隔0.5s刷新一次
+        self.update_interval = update_interval  # 每隔1s刷新一次
         self.log_dir = log_dir
         self.app = Flask(__name__, static_folder=STATIC_DIR, template_folder=TEMPLATES_DIR)
         self.debug = debug
@@ -131,7 +135,6 @@ class Server:
         self.app.run(host=self.host, port=self.port, debug=self.debug)
 
     def index(self, path):
-        print('index', path)
         if path not in ['', '/', 'index.html']:
             target_paths = [
                 path,

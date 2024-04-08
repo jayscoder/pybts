@@ -34,7 +34,8 @@ pybts (Python Behavior Tree) is a Python library for creating and managing behav
 Currently, pybts is not available through package managers and must be installed by cloning the repository:
 
 ```sh
-pip install pybts # not pybts
+pip install pybts
+pip install pybts[rl] # add reinforcement learning support
 # or
 git clone https://github.com/wangtong2015/pybts.git
 cd pybts

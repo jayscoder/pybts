@@ -92,6 +92,12 @@ class Builder:
         )
 
         self.register_bt(
+                Failure,
+                Success,
+                Running
+        )
+
+        self.register_bt(
                 Inverter,
                 RunningUntilCondition,
                 OneShot,

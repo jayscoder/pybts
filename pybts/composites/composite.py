@@ -15,10 +15,10 @@ class Composite(Node, ABC):
 
     def __init__(
             self,
-            name: str = '',
             children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
+            **kwargs
     ):
-        super().__init__(name=name)
+        super().__init__(**kwargs)
         if children is not None:
             for child in children:
                 self.add_child(child)
@@ -28,7 +28,7 @@ class Composite(Node, ABC):
 
     @classmethod
     def creator(cls, d: dict, c: list):
-        return cls(name=d['name'], children=c)
+        return cls(children=c, **d)
 
     def stop(self, new_status: Status = Status.INVALID) -> None:
         """

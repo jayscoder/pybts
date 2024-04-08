@@ -1,4 +1,5 @@
 from py_trees.common import Status, Access
+from enum import Enum
 
 
 def _hex_color(color: str) -> tuple[int, int, int]:

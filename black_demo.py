@@ -4,7 +4,7 @@ import pybts
 from cachetools import Cache
 
 
-class TestNodeA(pybts.Action):
+class TestNodeA(pybts.Node, pybts.Action):
 
     def __init__(self):
         super().__init__()
@@ -21,7 +21,7 @@ class TestNodeA(pybts.Action):
         return Status.SUCCESS
 
 
-class TestNodeB(pybts.Action):
+class TestNodeB(pybts.Node, pybts.Action):
 
     def __init__(self):
         super().__init__()

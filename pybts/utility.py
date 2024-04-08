@@ -10,6 +10,7 @@ import xml.etree.ElementTree as ET
 from xml.dom import minidom
 import os
 import json
+import jinja2
 
 
 def read_queue_without_destroying(q: Queue):
@@ -246,3 +247,5 @@ def clear_project(log_dir: str, project: str):
         delete_folder_contents(history_dir)
 
 
+def jinja2_render(template: str, context: dict) -> str:
+    return jinja2.Template(template).render(context)

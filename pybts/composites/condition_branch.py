@@ -38,9 +38,6 @@ class ConditionBranch(Composite):
     <Parallel>
     """
 
-    def __init__(self, name: str = '', children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None):
-        super().__init__(name=name, children=children)
-
     def tick(self) -> typing.Iterator[Behaviour]:
         assert len(self.children) in [2, 3]
         condition = self.children[0]

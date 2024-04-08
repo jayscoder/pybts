@@ -9,7 +9,7 @@ from py_trees.common import Status
 import pybts
 
 
-class ToggleStatus(pybts.Condition):
+class ToggleStatus(pybts.Node, pybts.Condition):
     def __init__(self, status_list: list, name: str = ''):
         super().__init__(name=name)
         self.init_count = 0

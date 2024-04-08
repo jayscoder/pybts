@@ -25,18 +25,19 @@ class Parallel(Composite):
 
     def __init__(
             self,
-            name: str = '',
             success_threshold: int = 1,
-            children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
+            **kwargs
     ):
-        super().__init__(name=name, children=children)
+        super().__init__(**kwargs)
         self.success_threshold = success_threshold
 
     @classmethod
     def creator(cls, d: dict, c: list):
-        return cls(name=d['name'],
-                   success_threshold=int(d.get('success_threshold', 1)),
-                   children=c)
+        return cls(
+                success_threshold=int(d.get('success_threshold', 1)),
+                children=c,
+                **d
+        )
 
     def tick(self) -> typing.Iterator[py_trees.behaviour.Behaviour]:
         """

@@ -31,7 +31,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 
     """
 
-    def __init__(self, name: str = ''):
+    def __init__(self, name: str = '', **kwargs):
         super().__init__(name=name or self.__class__.__name__)
         self._updater_iter = None
         self.debug_info = {
@@ -50,7 +50,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 
     @classmethod
     def creator(cls, d: dict, c: list):
-        return cls(name=d['name'])
+        return cls(**d)
 
     def to_data(self):
         # 在board上查看的信息
@@ -140,14 +140,23 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         self.logger.debug("%s.initialise()" % (self.__class__.__name__))
         self.debug_info['initialise_count'] += 1
 
+    def __str__(self):
+        if len(self.children) == 0:
+            return f'<{self.name} id="{self.id.hex}"/>'
+        else:
+            return f'<{self.name} id="{self.id.hex}"> {len(self.children)} </{self.name}>'
+
+    def __repr__(self):
+        return self.__str__()
+
 
 class Action(Node, ABC):
     """
     行为节点
     """
 
-    def __init__(self, name: str = ''):
-        super().__init__(name=name)
+    def __init__(self, name: str = '', **kwargs):
+        super().__init__(name=name, **kwargs)
         self.actions = Queue()
 
     def to_data(self):
@@ -159,14 +168,14 @@ class Action(Node, ABC):
         }
 
 
-class Condition(Node, ABC):
+class Condition:
     """
-    条件节点
+    条件节点，只能多继承使用
     """
     pass
 
 
-class Success(Condition):
+class Success(Node, Condition):
     """
     成功节点
     """
@@ -179,7 +188,7 @@ class Success(Condition):
         super().stop(new_status)
 
 
-class Failure(Condition):
+class Failure(Node, Condition):
     """
     失败节点
     """
@@ -189,7 +198,7 @@ class Failure(Condition):
         return Status.FAILURE
 
 
-class Running(Condition):
+class Running(Node, Condition):
     """Running Node"""
 
     def update(self) -> Status:

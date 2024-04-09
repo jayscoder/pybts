@@ -41,7 +41,7 @@ class Builder:
             self.register(module_name, node)
 
     def build_from_file(self, filepath: str):
-        with open(filepath, 'r') as f:
+        with open(filepath, 'r', encoding='utf-8') as f:
             text = f.read()
         if filepath.endswith('.json'):
             return self.build_from_json(json_data=text, ignore_children=False)

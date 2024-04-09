@@ -29,10 +29,8 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     下一次tick的时候状态一开始是RUNNING，则直接调用
     update
     """
-    attrs: typing.Dict[str, typing.AnyStr]  # 在builder和xml中传递的参数，会在__init__之后提供
-    context: typing.Optional[dict]  # 共享的字典，在setup的时候提供
 
-    def __init__(self, name: str = '', **kwargs):
+    def __init__(self, name: str = '', children: typing.List[py_trees.behaviour.Behaviour] = None, **kwargs):
         super().__init__(name=name or self.__class__.__name__)
         self._updater_iter = None
         self.debug_info = {
@@ -42,6 +40,12 @@ class Node(py_trees.behaviour.Behaviour, ABC):
             'terminate_count' : 0,
             'initialise_count': 0
         }
+        self.attrs: typing.Dict[str, typing.AnyStr] = kwargs # 在builder和xml中传递的参数，会在__init__之后提供一个更完整的
+        self.context: typing.Optional[dict] = None  # 共享的字典，在tree.setup的时候提供
+        if children is not None:
+            self.children = children
+            for child in children:
+                child.parent = self
 
     def reset(self):
         self.debug_info['reset_count'] += 1
@@ -49,9 +53,10 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         if self.status != Status.INVALID:
             self.stop(Status.INVALID)
 
-    @classmethod
-    def creator(cls, d: dict, c: list):
-        return cls(**d)
+    @property
+    def converter(self):
+        from pybts.converter import Converter
+        return Converter(self)
 
     def to_data(self):
         # 在board上查看的信息

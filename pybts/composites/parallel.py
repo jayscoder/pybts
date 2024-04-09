@@ -30,7 +30,7 @@ class Parallel(Composite):
     ):
         super().__init__(**kwargs)
         self.success_threshold = int(success_threshold)
-    
+
     def tick(self) -> typing.Iterator[py_trees.behaviour.Behaviour]:
         """
             同时执行所有子节点，并根据成功阈值来决定返回状态

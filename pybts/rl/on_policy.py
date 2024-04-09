@@ -315,10 +315,13 @@ class RLOnPolicyNode(ABC):
             )
 
             if path != '':
-                model.set_parameters(
-                        load_path_or_dict=path,
-                        device=self.rl_device()
-                )
+                try:
+                    model.set_parameters(
+                            load_path_or_dict=path,
+                            device=self.rl_device()
+                    )
+                except Exception as e:
+                    pass
         else:
             assert path != '', f'No model path provided: {path}'
             model = PPO.load(
@@ -341,7 +344,7 @@ class RLOnPolicyNode(ABC):
 
         self.rl_model = model
         return model
-
+    
 # def bt_on_policy_predict(model: OnPolicyAlgorithm, last_obs):
 #     model.predict()
 #     # Switch to eval mode (this affects batch norm / dropout)

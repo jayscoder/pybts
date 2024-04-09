@@ -18,17 +18,8 @@ class Composite(Node, ABC):
             children: typing.Optional[typing.List[py_trees.behaviour.Behaviour]] = None,
             **kwargs
     ):
-        super().__init__(**kwargs)
-        if children is not None:
-            for child in children:
-                self.add_child(child)
-        else:
-            self.children = []
+        super().__init__(children=children, **kwargs)
         self.current_child: typing.Optional[behaviour.Behaviour] = None
-
-    @classmethod
-    def creator(cls, d: dict, c: list):
-        return cls(children=c, **d)
 
     def stop(self, new_status: Status = Status.INVALID) -> None:
         """
@@ -224,47 +215,46 @@ class Composite(Node, ABC):
         child.parent = self
         return child.id
 
+    def SEQ_SEL_tick(
+            self,
+            tick_again_status: list[Status],
+            continue_status: list[Status],
+            no_child_status: Status,
+            start_index: int = 0
+    ):
+        """Sequence/Selector的tick逻辑"""
+        self.debug_info['tick_count'] += 1
+        self.logger.debug("%s.tick()" % (self.__class__.__name__))
 
-def SEQ_SEL_tick(
-        self: Composite,
-        tick_again_status: list[Status],
-        continue_status: list[Status],
-        no_child_status: Status,
-        start_index: int = 0
-):
-    """Sequence/Selector的tick逻辑"""
-    self.debug_info['tick_count'] += 1
-    self.logger.debug("%s.tick()" % (self.__class__.__name__))
+        if self.status in tick_again_status:
+            # 重新执行上次执行的子节点
+            assert self.current_child is not None
+            index = self.children.index(self.current_child)
+        else:
+            self.current_child = None  # 从头执行
+            index = start_index
 
-    if self.status in tick_again_status:
-        # 重新执行上次执行的子节点
-        assert self.current_child is not None
-        index = self.children.index(self.current_child)
-    else:
-        self.current_child = None  # 从头执行
-        index = start_index
+        for child in itertools.islice(self.children, index, None):
+            self.current_child = child
+            yield from child.tick()
+            if child.status not in continue_status:
+                break
 
-    for child in itertools.islice(self.children, index, None):
-        self.current_child = child
-        yield from child.tick()
-        if child.status not in continue_status:
-            break
+        if self.current_child is not None:
+            new_status = self.current_child.status
 
-    if self.current_child is not None:
-        new_status = self.current_child.status
+            index = self.children.index(self.current_child)
 
-        index = self.children.index(self.current_child)
+            # 剩余的子节点全部停止
+            for child in itertools.islice(self.children, index + 1, None):
+                # 清除子节点的状态（停止正在执行的子节点）
+                child.stop(Status.INVALID)
+        else:
+            new_status = no_child_status
 
-        # 剩余的子节点全部停止
-        for child in itertools.islice(self.children, index + 1, None):
-            # 清除子节点的状态（停止正在执行的子节点）
-            child.stop(Status.INVALID)
-    else:
-        new_status = no_child_status
+        # TODO: 这里要不要加这个是存疑的（组合节点invalid stop会停止所有子节点，所以某个子节点返回invalid是否要将所有的其他节点都停止？）
+        # if new_status != Status.RUNNING:
+        #     self.stop(new_status)
 
-    # TODO: 这里要不要加这个是存疑的（组合节点invalid stop会停止所有子节点，所以某个子节点返回invalid是否要将所有的其他节点都停止？）
-    # if new_status != Status.RUNNING:
-    #     self.stop(new_status)
-
-    self.status = new_status
-    yield self
+        self.status = new_status
+        yield self

@@ -107,7 +107,9 @@ class Builder:
                 ReactiveSelector,
                 SelectorWithMemory,
                 ConditionBranch,
-                Template
+                Template,
+                PreCondition,
+                PostCondition
         )
 
         self.register_node(

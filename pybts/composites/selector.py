@@ -2,7 +2,7 @@ import py_trees
 import typing
 from py_trees.common import Status
 from py_trees import behaviour
-from pybts.composites.composite import Composite, SEQ_SEL_tick
+from pybts.composites.composite import Composite
 
 
 class Selector(Composite):
@@ -16,8 +16,7 @@ class Selector(Composite):
     """
 
     def tick(self) -> typing.Iterator[behaviour.Behaviour]:
-        return SEQ_SEL_tick(
-                self,
+        return self.SEQ_SEL_tick(
                 tick_again_status=[Status.RUNNING],
                 continue_status=[Status.FAILURE, Status.INVALID],
                 no_child_status=Status.FAILURE,
@@ -33,8 +32,7 @@ class SelectorWithMemory(Selector):
     """
 
     def tick(self) -> typing.Iterator[behaviour.Behaviour]:
-        return SEQ_SEL_tick(
-                self,
+        return self.SEQ_SEL_tick(
                 tick_again_status=[Status.SUCCESS, Status.RUNNING],
                 continue_status=[Status.FAILURE, Status.INVALID],
                 no_child_status=Status.FAILURE,
@@ -51,11 +49,8 @@ class ReactiveSelector(Selector):
     """
 
     def tick(self) -> typing.Iterator[behaviour.Behaviour]:
-        return SEQ_SEL_tick(
-                self,
+        return self.SEQ_SEL_tick(
                 tick_again_status=[],
                 continue_status=[Status.FAILURE, Status.INVALID],
                 no_child_status=Status.FAILURE,
                 start_index=0)
-
-

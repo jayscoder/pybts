@@ -162,6 +162,17 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     def __repr__(self):
         return self.__str__()
 
+    def get_time(self) -> float:
+        """获取行为树时间，时间可以由context传入，可以是一个函数"""
+        if self.context is not None and 'time' in self.context:
+            if callable(self.context['time']):
+                return self.context['time']()
+            # 在context传递了time的情况下使用context里的时间，方便使用游戏时间
+            return self.context['time']
+        else:
+            import time
+            return time.monotonic()
+
 
 class Action(Node, ABC):
     """

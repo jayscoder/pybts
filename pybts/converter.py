@@ -37,6 +37,9 @@ class Converter:
             ctx.update(self.node.attrs)
         if context is not None:
             ctx.update(context)
+        for key in ctx:
+            if callable(ctx[key]):
+                ctx[key] = ctx['key']()
         return jinja2.Template(value).render(ctx)
 
     def list(self, value: typing.Any) -> typing.List[typing.Any]:

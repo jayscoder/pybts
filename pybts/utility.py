@@ -40,7 +40,10 @@ def bt_to_node_type(node: py_trees.behaviour.Behaviour) -> str:
         return BT_NODE_TYPE.ACTION
 
 
-def bt_to_json(node: py_trees.behaviour.Behaviour, ignore_children: bool = False) -> dict:
+def bt_to_json(node: py_trees.behaviour.Behaviour,
+               ignore_children: bool = False,
+               ignore_attrs: list = None,
+               ignore_to_data: bool = False) -> dict:
     info = {
         'tag'     : node.__class__.__name__,
         'children': [],
@@ -51,18 +54,29 @@ def bt_to_json(node: py_trees.behaviour.Behaviour, ignore_children: bool = False
             BT_PRESET_DATA_KEY.TAG              : node.__class__.__name__,
             BT_PRESET_DATA_KEY.FEEDBACK_MESSAGES: node.feedback_message,
             BT_PRESET_DATA_KEY.NAME             : node.name,
-            BT_PRESET_DATA_KEY.CHILDREN_COUNT   : len(node.children)
         },
     }
 
     if isinstance(node, Node):
         info['data'] = {
-            **info['data'],
-            **node.to_data(),
+            **info['data'], **node.attrs,
         }
+        if not ignore_to_data:
+            info['data'] = {
+                **info['data'],
+                **node.to_data(),
+            }
+
+    if ignore_attrs:
+        # 忽略某些键
+        for key in ignore_attrs:
+            if key in info['data']:
+                del info['data'][key]
 
     if not ignore_children:
-        info['children'] = [bt_to_json(child, ignore_children=ignore_children) for child in node.children]
+        info['children'] = [
+            bt_to_json(child, ignore_children=ignore_children, ignore_to_data=ignore_to_data, ignore_attrs=ignore_attrs)
+            for child in node.children]
     return info
 
 
@@ -99,14 +113,18 @@ def bt_to_echarts_json(node: dict | py_trees.behaviour.Behaviour | ET.Element, i
     return d
 
 
-def bt_to_xml_node(node: dict | py_trees.behaviour.Behaviour, ignore_children=False) -> ET.Element:
+def bt_to_xml_node(node: dict | py_trees.behaviour.Behaviour, ignore_children=False,
+                   ignore_attrs: list = None,
+                   ignore_to_data: bool = False) -> ET.Element:
     if isinstance(node, py_trees.behaviour.Behaviour):
-        node = bt_to_json(node, ignore_children=ignore_children)
+        node = bt_to_json(node, ignore_children=ignore_children, ignore_attrs=ignore_attrs,
+                          ignore_to_data=ignore_to_data)
     attribs = { key: str(value) for key, value in node['data'].items() }
     xml_node = ET.Element(node['tag'], attrib=attribs)
     if not ignore_children:
         for child in node['children']:
-            xml_node.append(bt_to_xml_node(child, ignore_children=ignore_children))
+            xml_node.append(bt_to_xml_node(child, ignore_children=ignore_children, ignore_attrs=ignore_attrs,
+                                           ignore_to_data=ignore_to_data))
     return xml_node
 
 
@@ -116,8 +134,12 @@ def xml_node_to_string(xml_node: ET.Element) -> str:
     return text
 
 
-def bt_to_xml(node: dict | py_trees.behaviour.Behaviour, ignore_children=False) -> str:
-    xml_node = bt_to_xml_node(node, ignore_children=ignore_children)
+def bt_to_xml(node: dict | py_trees.behaviour.Behaviour, ignore_children=False,
+              ignore_attrs: list = None,
+              ignore_to_data: bool = False
+              ) -> str:
+    xml_node = bt_to_xml_node(node, ignore_children=ignore_children, ignore_attrs=ignore_attrs,
+                              ignore_to_data=ignore_to_data)
     return xml_node_to_string(xml_node)
 
 
@@ -184,6 +206,8 @@ class PYBTJsonEncoder(json.JSONEncoder):
             return list(set)
         elif isinstance(obj, Status):
             return obj.value
+        elif callable(obj):
+            return obj()
         else:
             try:
                 import numpy as np
@@ -258,5 +282,3 @@ def camel_case_to_snake_case(name):
     :return:
     """
     return ''.join(['_' + i.lower() if i.isupper() else i for i in name]).lstrip('_')
-
-

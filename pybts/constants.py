@@ -110,6 +110,6 @@ class BT_PRESET_DATA_KEY:
     STATUS = 'status'
     TAG = 'tag'
     BLACKBOARD = 'blackboard'
-    FEEDBACK_MESSAGES = 'feedback_message'
+    FEEDBACK_MESSAGES = 'feedback_messages'
     NAME = 'name'
     CHILDREN_COUNT = 'children_count'

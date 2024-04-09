@@ -283,13 +283,9 @@ class Timeout(Decorator):
         super().setup(**kwargs)
         self.duration = self.converter.float(self.duration)
 
-    def get_time(self) -> float:
-        if self.context is not None and 'time' in self.context:
-            # 在context传递了time的情况下使用context里的时间，方便使用游戏时间
-            return self.context['time']
-        else:
-            import time
-            return time.monotonic()
+    def reset(self):
+        super().reset()
+        self.finish_time = 0
 
     def initialise(self) -> None:
         """Reset the feedback message and finish time on behaviour entry."""
@@ -568,17 +564,13 @@ class Throttle(Decorator):
         self.duration = duration
         self.last_time = -float('inf')
 
+    def reset(self):
+        super().reset()
+        self.last_time = -float('inf')
+
     def setup(self, **kwargs: typing.Any) -> None:
         super().setup(**kwargs)
         self.duration = self.converter.float(self.duration)
-
-    def get_time(self) -> float:
-        if self.context is not None and 'time' in self.context:
-            # 在context传递了time的情况下使用context里的时间，方便使用游戏时间
-            return self.context['time']
-        else:
-            import time
-            return time.monotonic()
 
     def update(self) -> Status:
         return self.decorated.status
@@ -590,3 +582,4 @@ class Throttle(Decorator):
             yield from Decorator.tick(self)
         else:
             yield from Node.tick(self)
+

@@ -10,22 +10,26 @@ class Converter:
 
     def bool(self, value: typing.Any):
         if isinstance(value, str):
-            return value.lower() == 'true'
+            if value.lower() == 'true':
+                return True
+            elif value.lower() == 'false':
+                return False
+            return bool(eval(self.render(value)))
         return bool(value)
 
     def float(self, value: typing.Any):
         if isinstance(value, str):
-            return float(value)
+            return eval(self.render(value))
         else:
             return float(value)
 
     def int(self, value: typing.Any):
         if isinstance(value, str):
-            return int(value)
+            return int(eval(self.render(value)))
         else:
-            return float(value)
+            return int(value)
 
-    def render(self, value: typing.Any, context: dict = None) -> str:
+    def render(self, value: str, context: dict = None) -> str:
         ctx = { }
         if self.node.context is not None:
             ctx.update(self.node.context)
@@ -37,7 +41,7 @@ class Converter:
 
     def list(self, value: typing.Any) -> typing.List[typing.Any]:
         if isinstance(value, str):
-            return json.loads(value)
+            return eval(self.render(value))
         elif isinstance(value, list):
             return value
         elif isinstance(value, tuple):
@@ -53,7 +57,7 @@ class Converter:
 
     def dict(self, value: typing.Any) -> typing.Dict[str, typing.Any]:
         if isinstance(value, str):
-            return json.loads(value)
+            return eval(self.render(value))
         elif isinstance(value, dict):
             return value
         else:

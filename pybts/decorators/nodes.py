@@ -15,9 +15,12 @@ class Decorator(Node, ABC):
     def __init__(self, children: list[py_trees.behaviour.Behaviour], **kwargs):
         # Checks
         # Initialise
-        super().__init__(children=children,**kwargs)
+        super().__init__(children=children, **kwargs)
         # Give a convenient alias
-        self.decorated = self.children[0]
+        if len(self.children) > 0:
+            self.decorated = self.children[0]
+        else:
+            self.decorated: Node | None = None
 
     def tick(self) -> typing.Iterator[py_trees.behaviour.Behaviour]:
         """

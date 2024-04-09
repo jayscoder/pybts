@@ -40,7 +40,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
             'terminate_count' : 0,
             'initialise_count': 0
         }
-        self.attrs: typing.Dict[str, typing.AnyStr] = kwargs # 在builder和xml中传递的参数，会在__init__之后提供一个更完整的
+        self.attrs: typing.Dict[str, typing.AnyStr] = kwargs  # 在builder和xml中传递的参数，会在__init__之后提供一个更完整的
         self.context: typing.Optional[dict] = None  # 共享的字典，在tree.setup的时候提供
         if children is not None:
             self.children = children
@@ -185,7 +185,17 @@ class Condition:
     """
     条件节点，只能多继承使用
     """
-    pass
+
+    def condition_score(self) -> float:
+        """条件达成分数，后面可以作为奖励函数设计使用"""
+        if isinstance(self, Node):
+            if self.status == Status.SUCCESS:
+                return 1
+            elif self.status == Status.RUNNING:
+                return 0.5
+            else:
+                return 0
+        return 0
 
 
 class Success(Node, Condition):

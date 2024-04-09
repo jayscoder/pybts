@@ -1,23 +1,28 @@
 from __future__ import annotations
 
 import json
+import os.path
 from typing import Callable
 import xml.etree.ElementTree as ET
 import copy
-from pybts.constants import *
 from pybts.node import *
 from pybts.composites import *
 from pybts.decorators import *
 import uuid
 from pybts.utility import camel_case_to_snake_case
+from pybts.ref_file import RefFile
 
 
 class Builder:
-    def __init__(self, **kwargs):
+    def __init__(self, folders: str | list = '', global_attrs: dict = None):
         self.repo = { }  # 注册节点的仓库
         self.repo_desc = { }  # 仓库的描述
         self.register_default()
-        self.kwargs = kwargs.copy()  # 全局参数
+        self.global_attrs = global_attrs or { }  # 全局参数，会在build时传递给每一个节点
+        if isinstance(folders, str):
+            self.folders = [folders]
+        else:
+            self.folders = folders
 
     def register(self, name: str | list[str], creator: Callable, desc: str = ''):
         if isinstance(name, str):
@@ -40,9 +45,23 @@ class Builder:
             module_name = f'{node.__module__}.{node.__name__}'
             self.register(module_name, node)
 
+    def read_text_from_file(self, filepath: str) -> str:
+        # 从folder中找文件
+        if os.path.exists(filepath) and os.path.isfile(filepath):
+            with open(filepath, 'r', encoding='utf-8') as file:
+                return file.read()
+
+        # 遍历文件夹列表里所有的文件，找到和文件名相同的文件并返回内容
+        for folder in self.folders:
+            folder_filepath = os.path.join(folder, filepath)
+            if os.path.exists(folder_filepath) and os.path.isfile(folder_filepath):
+                with open(folder_filepath, 'r', encoding='utf-8') as file:
+                    return file.read()
+
+        raise Exception(f'Cannot find file: {filepath}')
+
     def build_from_file(self, filepath: str):
-        with open(filepath, 'r', encoding='utf-8') as f:
-            text = f.read()
+        text = self.read_text_from_file(filepath=filepath)
         if filepath.endswith('.json'):
             return self.build_from_json(json_data=text, ignore_children=False)
         elif filepath.endswith('.xml'):
@@ -76,7 +95,7 @@ class Builder:
         #     data['name'] = json_data['tag']
 
         attrs = {
-            **self.kwargs,
+            **self.global_attrs,
             **data,
         }
         try:
@@ -130,6 +149,15 @@ class Builder:
                 SuccessIsFailure,
                 SuccessIsRunning,
         )
+
+        self.register_node(RefFile)
+
+        # 且或非
+        self.register('And', Sequence)
+        self.register('Or', Selector)
+        self.register('Not', Inverter)
+        self.register('Root', Parallel)  # 可以作为根节点
+        # 强化学习
 
 
 if __name__ == '__main__':

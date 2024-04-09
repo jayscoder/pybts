@@ -1,0 +1,11 @@
+digraph pastafarianism {
+ordering=out;
+graph [fontname="times-roman"];
+node [fontname="times-roman"];
+edge [fontname="times-roman"];
+Parallel [fillcolor=gray, fontcolor=black, fontsize=9, label=Parallel, shape=ellipse, style=filled];
+RefFile [fillcolor=gray, fontcolor=black, fontsize=9, label=RefFile, shape=ellipse, style=filled];
+Parallel -> RefFile;
+"RefFile*" [fillcolor=gray, fontcolor=black, fontsize=9, label="RefFile*", shape=ellipse, style=filled];
+Parallel -> "RefFile*";
+}

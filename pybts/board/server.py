@@ -148,9 +148,6 @@ class Server:
     def send_static(self, path):
         return send_from_directory(STATIC_DIR, path)
 
-    def send_template(self, path):
-        return send_from_directory(TEMPLATES_DIR, path)
-
     def get_projects(self):
         # 获取log_dir里面的所有的文件夹
         projects = []

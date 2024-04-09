@@ -9,6 +9,7 @@ from .composites import *
 from .board import Board
 from .builder import Builder
 from .decorators import *
+from .ref_file import RefFile
 from py_trees import logging
 
 from importlib.metadata import version

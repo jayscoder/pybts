@@ -3,6 +3,7 @@ import typing
 import py_trees
 from py_trees import common, visitors
 from pybts.node import Node
+from pybts.builder import Builder
 
 
 class Tree(py_trees.trees.BehaviourTree):
@@ -31,11 +32,12 @@ class Tree(py_trees.trees.BehaviourTree):
             self,
             timeout: typing.Union[float, common.Duration] = common.Duration.INFINITE,
             visitor: typing.Optional[visitors.VisitorBase] = None,
+            builder: typing.Optional[Builder] = None,
             **kwargs: any,
     ) -> None:
         for node in self.root.iterate():
             node.context = self.context
-        super().setup(timeout=timeout, visitor=visitor, **kwargs)
+        super().setup(timeout=timeout, visitor=visitor, builder=builder, **kwargs)
 
     def reset(self):
         self.count = 0

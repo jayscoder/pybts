@@ -24,6 +24,12 @@ c = C()
 print(c.x, c.y, c.z)
 print(c.__dict__)
 print(C.__dict__)
+from collections import defaultdict
 
 if __name__ == '__main__':
-    pass
+    d = defaultdict(int)
+    d['a'] = defaultdict(int)
+    d['a']['b'] = 1
+    import json
+
+    print(json.dumps(d))

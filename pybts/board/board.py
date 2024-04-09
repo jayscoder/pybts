@@ -62,3 +62,4 @@ class Board:
                     with open(filepath, 'r', encoding='utf') as f:
                         json_data = utility.json_loads(f.read())
                         yield json_data
+

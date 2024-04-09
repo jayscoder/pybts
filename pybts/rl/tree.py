@@ -31,4 +31,3 @@ class RLTree(Tree):
         for scope in self.context['rl_reward']:
             self.context['rl_reward'][scope] = 0  # 清空奖励
         super().tick(pre_tick_handler=pre_tick_handler, post_tick_handler=post_tick_handler)
-

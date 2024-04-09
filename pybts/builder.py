@@ -148,6 +148,8 @@ class Builder:
                 FailureIsRunning,
                 SuccessIsFailure,
                 SuccessIsRunning,
+                Timeout,
+                Throttle
         )
 
         self.register_node(RefFile)

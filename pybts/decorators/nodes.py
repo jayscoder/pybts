@@ -225,7 +225,7 @@ class OneShot(Decorator):
         """
         if self.final_status:
             # ignore the child
-            for node in py_trees.behaviour.Behaviour.tick(self):
+            for node in Node.tick(self):
                 yield node
         else:
             # tick the child
@@ -252,6 +252,80 @@ class OneShot(Decorator):
             self.logger.debug(
                     "{}.terminate({})".format(self.__class__.__name__, new_status)
             )
+
+
+class Timeout(Decorator):
+    """
+    Executes a child/subtree with a timeout.
+
+    A decorator that applies a timeout pattern to an existing behaviour.
+    If the timeout is reached, the encapsulated behaviour's
+    :meth:`~py_trees.behaviour.Behaviour.stop` method is called with
+    status :data:`~py_trees.common.Status.FAILURE` otherwise it will
+    simply directly tick and return with the same status
+    as that of it's encapsulated behaviour.
+    """
+
+    def __init__(self, duration: float = 5.0, **kwargs):
+        """
+        Init with the decorated child and a timeout duration.
+
+        Args:
+            child: the child behaviour or subtree
+            name: the decorator name
+            duration: timeout length in seconds
+        """
+        super(Timeout, self).__init__(**kwargs)
+        self.duration = duration
+        self.finish_time = 0.0
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.duration = self.converter.float(self.duration)
+
+    def get_time(self) -> float:
+        if self.context is not None and 'time' in self.context:
+            # 在context传递了time的情况下使用context里的时间，方便使用游戏时间
+            return self.context['time']
+        else:
+            import time
+            return time.monotonic()
+
+    def initialise(self) -> None:
+        """Reset the feedback message and finish time on behaviour entry."""
+        self.finish_time = self.get_time() + self.duration
+        self.feedback_message = ""
+
+    def update(self) -> Status:
+        """
+        Fail on timeout, or block / reflect the child's result accordingly.
+
+        Terminate the child and return
+        :data:`~py_trees.common.Status.FAILURE`
+        if the timeout is exceeded.
+
+        Returns:
+            the behaviour's new status :class:`~py_trees.common.Status`
+        """
+        current_time = self.get_time()
+        if (
+                self.decorated.status == Status.RUNNING
+                and current_time > self.finish_time
+        ):
+            self.feedback_message = "timed out"
+            self.logger.debug(
+                    "{}.update() {}".format(self.__class__.__name__, self.feedback_message)
+            )
+            # invalidate the decorated (i.e. cancel it), could also put this logic in a terminate() method
+            self.decorated.stop(Status.INVALID)
+            return Status.FAILURE
+        if self.decorated.status == Status.RUNNING:
+            self.feedback_message = "time still ticking ... [remaining: {}s]".format(
+                    self.finish_time - current_time
+            )
+        else:
+            self.feedback_message = "child finished before timeout triggered"
+        return self.decorated.status
 
 
 class Count(Decorator):
@@ -474,3 +548,45 @@ class SuccessIsRunning(Decorator):
             return Status.RUNNING
         self.feedback_message = self.decorated.feedback_message
         return self.decorated.status
+
+
+class Throttle(Decorator):
+    """
+    每隔一段时间才会触发一次子节点，其他时间直接返回之前的状态
+    """
+
+    def __init__(self, duration: float | str = 5.0, **kwargs):
+        """
+        Init with the decorated child and a timeout duration.
+
+        Args:
+            child: the child behaviour or subtree
+            name: the decorator name
+            duration: timeout length in seconds
+        """
+        super().__init__(**kwargs)
+        self.duration = duration
+        self.last_time = -float('inf')
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.duration = self.converter.float(self.duration)
+
+    def get_time(self) -> float:
+        if self.context is not None and 'time' in self.context:
+            # 在context传递了time的情况下使用context里的时间，方便使用游戏时间
+            return self.context['time']
+        else:
+            import time
+            return time.monotonic()
+
+    def update(self) -> Status:
+        return self.decorated.status
+
+    def tick(self):
+        now_time = self.get_time()
+        if now_time - self.last_time >= self.duration:
+            self.last_time = now_time
+            yield from Decorator.tick(self)
+        else:
+            yield from Node.tick(self)

@@ -2,19 +2,50 @@ from __future__ import annotations
 
 import typing
 
-from pybts.node import Status, Success
+from pybts.node import Status, Success, Node
 from pybts.decorators.nodes import Decorator
 
 
-class Reward(Decorator):
+class Reward(Node):
     """
-    强化学习奖励节点
+    奖励节点，返回的状态一直是SUCCESS
+    当走到这个节点时，会将给定的奖励累计
+
+    只会对之后的节点生效，所以要放在前面
+    """
+
+    def __init__(self, reward: str | float, scope: str = 'default', **kwargs):
+        super().__init__(**kwargs)
+        self.reward = reward
+        self.scope = scope
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.reward = self.converter.float(self.reward)
+        self.scope = self.converter.render(self.scope).split(',')  # 域，只会将奖励保存在对应的scope中
+
+    def update(self) -> Status:
+        if self.context is not None:
+            for sc in self.scope:
+                self.context['rl_reward'][sc] += self.reward
+        return Status.SUCCESS
+
+
+class ConditionReward(Decorator):
+    """
+    强化学习奖励装饰节点
+    根据子节点的状态来提供奖励
+
+    success: 子节点成功时给的奖励
+    failure: 子节点失败时给的奖励
+    running: 子节点运行时给的奖励
+    only_on_status_change: 只有在子节点的状态改变时才会提供奖励
     """
 
     def __init__(self,
                  scope: str = 'default',
                  success: float | str = 1, failure: float | str = 0, running: float | str = 0.5,
-                 only_on_status_change: bool | str = True, **kwargs):
+                 only_on_status_change: bool | str = False, **kwargs):
         super().__init__(**kwargs)
         self.success = success
         self.failure = failure
@@ -75,7 +106,7 @@ class Reward(Decorator):
 
 
 if __name__ == '__main__':
-    node = Reward(scope='a,b,c', success='{{1}}/10', children=[Success()])
+    node = ConditionReward(scope='a,b,c', success='{{1}}/10', children=[Success()])
     node.setup()
     print(node.success)
     print(node.update())

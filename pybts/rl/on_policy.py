@@ -252,7 +252,6 @@ class RLOnPolicyNode(ABC):
             for scope in scopes:
                 curr_reward += self.context['rl_reward'].get(scope, 0)
             assert isinstance(self, RLOnPolicyNode)
-            print('rl_gen_reward', scopes, curr_reward, self.rl_accum_reward, self.context['rl_reward'])
             return curr_reward - self.rl_accum_reward
         raise NotImplemented
 

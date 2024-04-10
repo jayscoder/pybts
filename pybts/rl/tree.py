@@ -19,6 +19,11 @@ class RLTree(Tree):
         super().__init__(root=root, name=name, context=context)
         self.context['rl_reward'] = defaultdict(int)  # 本轮的奖励，默认scope是default
 
+    def reset(self):
+        super().reset()
+        # 清空奖励
+        self.context['rl_reward'] = defaultdict(int)
+
     def tick(
             self: RLTree,
             pre_tick_handler: typing.Optional[
@@ -28,6 +33,7 @@ class RLTree(Tree):
                 typing.Callable[[RLTree], None]
             ] = None,
     ) -> None:
-        for scope in self.context['rl_reward']:
-            self.context['rl_reward'][scope] = 0  # 清空奖励
+        # 不清空奖励，由PPO节点自行判断
+        # for scope in self.context['rl_reward']:
+        #     self.context['rl_reward'][scope] = 0  # 在tick之前清空奖励
         super().tick(pre_tick_handler=pre_tick_handler, post_tick_handler=post_tick_handler)

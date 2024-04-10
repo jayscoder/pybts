@@ -4,6 +4,7 @@ import typing
 
 from pybts.node import Status, Success, Node
 from pybts.decorators.nodes import Decorator
+from collections import defaultdict
 
 
 class Reward(Node):
@@ -12,6 +13,11 @@ class Reward(Node):
     当走到这个节点时，会将给定的奖励累计
 
     只会对之后的节点生效，所以要放在前面
+
+    reward: 给出的对应奖励
+    scope: 奖励存储域
+
+    奖励会累积，所以PPO节点在消费奖励时要记录一下上次拿到的奖励值，然后将两次差值作为最终奖励
     """
 
     def __init__(self, reward: str | float, scope: str = 'default', **kwargs):
@@ -25,10 +31,21 @@ class Reward(Node):
         self.scope = self.converter.render(self.scope).split(',')  # 域，只会将奖励保存在对应的scope中
 
     def update(self) -> Status:
+        assert self.context is not None, 'context is not set'
         if self.context is not None:
+            if 'rl_reward' not in self.context:
+                self.context['rl_reward'] = defaultdict(float)
             for sc in self.scope:
                 self.context['rl_reward'][sc] += self.reward
         return Status.SUCCESS
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'reward'   : self.reward,
+            'scope'    : self.scope,
+            'rl_reward': self.context['rl_reward'] if self.context is not None else None
+        }
 
 
 class ConditionReward(Decorator):

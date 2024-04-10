@@ -69,6 +69,11 @@ class Server:
                         "title": "下载XML",
                         "icon" : "",
                     },
+                    "myTool3": {
+                        "show" : True,
+                        "title": "展示信息",
+                        "icon" : "",
+                    },
                     "saveAsImage": {
                         "show": True
                     },
@@ -164,10 +169,13 @@ class Server:
                 projects.append({
                     'name'  : relative_path,
                     'unread': pybts_data.get('id') - self.last_read_id,
-                    'total' : pybts_data['id']
+                    'total' : pybts_data['id'],
+                    'modified_time': os.path.getmtime(os.path.join(dirpath, 'pybts.json'))
                 })
 
-        return projects
+        # 按照modified_time排序
+        sorted_projects = sorted(projects, key=lambda project: project['modified_time'])
+        return sorted_projects
 
     def get_config(self):
         projects = self.get_projects()

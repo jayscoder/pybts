@@ -8,6 +8,24 @@ class Converter:
     def __init__(self, node):
         self.node = node
 
+    def parse(self, value: typing.Any, type: str):
+        if type == "float":
+            return self.float(value)
+        elif type == "int":
+            return self.int(value)
+        elif type == "bool":
+            return self.bool(value)
+        elif type == "str":
+            return self.render(value)
+        elif type == 'dict':
+            return self.dict(value)
+        elif type == 'list':
+            return self.list(value)
+        elif type == '':
+            return self.render(value)
+        else:
+            raise Exception(f'Converter.parse: Unknown type={type} for value={value}')
+
     def bool(self, value: typing.Any):
         if isinstance(value, str):
             if value.lower() == 'true':
@@ -28,6 +46,19 @@ class Converter:
             return int(eval(self.render(value)))
         else:
             return int(value)
+
+    def eval(self, value: str, context: dict = None):
+        ctx = { }
+        if self.node.context is not None:
+            ctx.update(self.node.context)
+        if self.node.attrs is not None:
+            ctx.update(self.node.attrs)
+        if context is not None:
+            ctx.update(context)
+        for key in ctx:
+            if callable(ctx[key]):
+                ctx[key] = ctx[key]()
+        return eval(value, ctx)
 
     def render(self, value: str, context: dict = None) -> str:
         ctx = { }

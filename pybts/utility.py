@@ -44,18 +44,23 @@ def bt_to_json(node: py_trees.behaviour.Behaviour,
                ignore_children: bool = False,
                ignore_attrs: list = None,
                ignore_to_data: bool = False) -> dict:
-    info = {
-        'tag'     : node.__class__.__name__,
-        'children': [],
-        'data'    : {
-            BT_PRESET_DATA_KEY.ID               : node.id.hex,
-            BT_PRESET_DATA_KEY.STATUS           : node.status.name,
-            BT_PRESET_DATA_KEY.TYPE             : bt_to_node_type(node),
-            BT_PRESET_DATA_KEY.TAG              : node.__class__.__name__,
-            BT_PRESET_DATA_KEY.FEEDBACK_MESSAGES: node.feedback_message,
-            BT_PRESET_DATA_KEY.NAME             : node.name,
-        },
-    }
+    try:
+        info = {
+            'tag'     : node.__class__.__name__,
+            'children': [],
+            'data'    : {
+                BT_PRESET_DATA_KEY.ID               : node.id.hex,
+                BT_PRESET_DATA_KEY.STATUS           : node.status.name,
+                BT_PRESET_DATA_KEY.TYPE             : bt_to_node_type(node),
+                BT_PRESET_DATA_KEY.TAG              : node.__class__.__name__,
+                BT_PRESET_DATA_KEY.FEEDBACK_MESSAGES: node.feedback_message,
+                BT_PRESET_DATA_KEY.NAME             : node.name,
+            },
+        }
+
+    except Exception as e:
+        print(node, e)
+        raise e
 
     if isinstance(node, Node):
         info['data'] = {

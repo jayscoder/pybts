@@ -29,6 +29,7 @@ class Decorator(Node, ABC):
         Yields:
             a reference to itself or one of its children
         """
+        self.debug_info['tick_count'] += 1
         self.logger.debug("%s.tick()" % self.__class__.__name__)
         # initialise just like other behaviours/composites
         if self.status != Status.RUNNING:
@@ -548,6 +549,7 @@ class SuccessIsRunning(Decorator):
 
 class Throttle(Decorator):
     """
+    节流: 在一定时间间隔内只执行一次
     每隔一段时间才会触发一次子节点，其他时间直接返回之前的状态
     """
 

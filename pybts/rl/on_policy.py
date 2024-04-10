@@ -183,11 +183,11 @@ def bt_on_policy_train(self: OnPolicyAlgorithm, iteration: int, log_interval: in
 
 
 class RLOnPolicyNode(ABC):
-    """强化学习在线策略节点，拿来多继承用"""
+    """强化学习在线策略节点，拿来跟其他的Node多继承用"""
 
     def __init__(self):
         self.rl_on_policy_collector = None
-        self.rl_accum_reward = 0
+        self.rl_accum_reward = 0  # 当前累积奖励
         self.rl_info = None
         self.rl_reward = 0  # 当前奖励
         self.rl_obs = None
@@ -206,7 +206,8 @@ class RLOnPolicyNode(ABC):
             'rl_reward'      : self.rl_reward,
             'rl_obs'         : self.rl_obs,
             'rl_accum_reward': self.rl_accum_reward,
-            'rl_action'      : self.rl_action
+            'rl_action'      : self.rl_action,
+            'rl_reward_scope': self.rl_reward_scope()
         }
 
     @abstractmethod
@@ -229,8 +230,30 @@ class RLOnPolicyNode(ABC):
     def rl_gen_info(self) -> dict:
         raise NotImplemented
 
+    def rl_reward_scope(self) -> str:
+        """
+        奖励域
+
+        例如：default
+        多个奖励域用,分隔
+        如果设置了奖励域，则生成本轮奖励时会从self.context.rl_reward[scope]里获取
+        """
+        return ''
+
     @abstractmethod
     def rl_gen_reward(self) -> float:
+        reward_scope = self.rl_reward_scope()
+        if reward_scope != '':
+            assert isinstance(self, Node), 'RLOnPolicyNode 必须得继承Node节点'
+            assert self.context is not None, 'context必须得设置好'
+            assert 'rl_reward' in self.context, 'context必须得含有rl_reward键'
+            scopes = reward_scope.split(',')
+            curr_reward = 0
+            for scope in scopes:
+                curr_reward += self.context['rl_reward'].get(scope, 0)
+            assert isinstance(self, RLOnPolicyNode)
+            print('rl_gen_reward', scopes, curr_reward, self.rl_accum_reward, self.context['rl_reward'])
+            return curr_reward - self.rl_accum_reward
         raise NotImplemented
 
     @abstractmethod
@@ -241,12 +264,13 @@ class RLOnPolicyNode(ABC):
     def rl_device(self) -> str:
         return 'cpu'
 
-    def rl_take_action(self,
-                       train: bool,
-                       log_interval: int = 1,
-                       save_interval: int = 5,
-                       save_path: str = ''
-                       ):
+    def rl_take_action(
+            self,
+            train: bool,
+            log_interval: int = 1,
+            save_interval: int = 5,
+            save_path: str = ''
+    ):
         assert self.rl_model is not None, 'RL model not initialized'
         model = self.rl_model
         info = self.rl_gen_info()
@@ -293,8 +317,8 @@ class RLOnPolicyNode(ABC):
                            policy: str,
                            tensorboard_log: str = '',
                            verbose: int = 1,
-                           n_steps: int = 2048,
-                           batch_size: int = 64,
+                           n_steps: int = 32,
+                           batch_size: int = 32,
                            tb_log_name: str = ''
                            ):
         env = DummyEnv(
@@ -344,7 +368,7 @@ class RLOnPolicyNode(ABC):
 
         self.rl_model = model
         return model
-    
+
 # def bt_on_policy_predict(model: OnPolicyAlgorithm, last_obs):
 #     model.predict()
 #     # Switch to eval mode (this affects batch norm / dropout)

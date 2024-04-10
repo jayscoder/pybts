@@ -238,3 +238,116 @@ class Running(Node, Condition):
     def update(self) -> Status:
         super().update()
         return Status.RUNNING
+
+
+class IsMatchRule(Node, Condition):
+    """
+    是否匹配预设的规则
+
+    rule: 用python和jinja2语法描述的规定，例如{{agent.x}} > 10，返回值必须得是bool
+    - 花括号里定义的变量可以从context里找到
+    """
+
+    def __init__(self, rule: str, **kwargs):
+        super().__init__(**kwargs)
+        self.rule = rule
+
+    def update(self) -> Status:
+        rule_value = eval(self.converter.render(self.rule))
+        if rule_value:
+            return Status.SUCCESS
+        return Status.FAILURE
+
+
+class IsChanged(Node, Condition):
+    """
+    value是否发生变化
+    value的值从context里找，所以需要在tree每次更新时将对应的context填充进去
+    返回的Status：
+    - SUCCESS：发生变化
+    - FAILURE：没有发生变化
+
+    参数：
+    value: 监听的值
+    immediate: 是否一开始就认为发生了变化
+    rule: 判断规则，默认的规则是 curr_value != last_value，可以自定义新的规则，例如 abs(curr_value - last_value) >= 10，需要确保rule返回的值是bool类型
+        - rule里面也可以使用模版语法，比如 abs(curr_value - last_value) >= {{min_value}}，模版语法里的min_value需要提前在context里定义好，不然会报错
+    用法示例：
+    <IsChanged value="{{agent.x}}" immediate="true">
+    <IsChanged value="{{agent.y}}" immediate="false" rule="abs(curr_value - last_value) >= 10">
+    """
+
+    def __init__(self, value: str, immediate: bool | str = False, rule: str = '', **kwargs):
+        super().__init__(**kwargs)
+        self.value = value  # 监听的值
+        self.immediate = immediate
+        self.last_value = None  # 上一次的值
+        self.curr_value = None  # 当前值
+        self.changed_count = 0  # 改变次数
+        self.rule = rule  # 默认是 curr_value != last_value
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.immediate = self.converter.bool(self.immediate)
+
+    def reset(self):
+        super().reset()
+        self.last_value = None
+        self.curr_value = None
+        self.changed_count = 0
+
+    @property
+    def is_changed(self):
+        if self.rule == '':
+            return self.curr_value != self.last_value
+        else:
+            rule = self.converter.render(self.rule)
+            is_changed_value = eval(rule, {
+                **(self.context or { }),
+                'curr_value': self.curr_value,
+                'last_value': self.last_value
+            })
+            assert isinstance(is_changed_value, bool), 'IsChanged: invalid rule'
+            return is_changed_value
+
+    def update(self) -> Status:
+        self.curr_value = self.converter.render(self.value)
+        if not self.immediate and self.last_value is None:
+            # 刚开始不触发
+            self.last_value = self.curr_value
+
+        if self.is_changed:
+            # 发生了变化
+            self.changed_count += 1
+            self.last_value = self.curr_value
+            return Status.SUCCESS
+        else:
+            # 没有发生变化
+            return Status.FAILURE
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            "immediate"    : self.immediate,
+            "last_value"   : self.last_value,
+            "curr_value"   : self.curr_value,
+            'changed_count': self.changed_count,
+            'is_changed'   : self.is_changed
+        }
+
+
+class Print(Action):
+    def __init__(self, msg: str, **kwargs):
+        super().__init__(**kwargs)
+        self.msg = msg
+
+    def update(self) -> Status:
+        print(self.converter.render(self.msg))
+        return Status.SUCCESS
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            "msg": self.converter.render(self.msg)
+        }
+

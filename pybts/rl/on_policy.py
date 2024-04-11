@@ -15,6 +15,8 @@ import sys
 import gymnasium as gym
 from abc import ABC, abstractmethod
 from pybts.rl.common import DummyEnv
+from stable_baselines3.common.policies import ActorCriticPolicy
+from typing import Union
 
 
 def bt_on_policy_setup_learn(
@@ -202,12 +204,13 @@ class RLOnPolicyNode(ABC):
     def to_data(self):
         return {
             'rl_iteration'   : self.rl_iteration,
+            'rl_policy'      : str(self.rl_policy()),
             'rl_info'        : self.rl_info,
             'rl_reward'      : self.rl_reward,
             'rl_obs'         : self.rl_obs,
             'rl_accum_reward': self.rl_accum_reward,
             'rl_action'      : self.rl_action,
-            'rl_reward_scope': self.rl_reward_scope()
+            'rl_reward_scope': self.rl_reward_scope(),
         }
 
     @abstractmethod
@@ -263,6 +266,9 @@ class RLOnPolicyNode(ABC):
     def rl_device(self) -> str:
         return 'cpu'
 
+    def rl_policy(self) -> Union[str, typing.Type[ActorCriticPolicy]]:
+        return 'MlpPolicy'
+
     def rl_take_action(
             self,
             train: bool,
@@ -313,7 +319,6 @@ class RLOnPolicyNode(ABC):
     def rl_ppo_setup_model(self,
                            train: bool,
                            path: str,
-                           policy: str,
                            tensorboard_log: str = '',
                            verbose: int = 1,
                            n_steps: int = 32,
@@ -328,7 +333,7 @@ class RLOnPolicyNode(ABC):
 
         if train:
             model = PPO(
-                    policy=policy,
+                    policy=self.rl_policy(),
                     env=env,
                     verbose=1,
                     tensorboard_log=tensorboard_log,

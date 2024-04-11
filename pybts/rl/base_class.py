@@ -1,130 +1,29 @@
-from __future__ import annotations
-from pybts.node import Status, Success, Node
-from pybts.decorators.nodes import Decorator
-from collections import defaultdict
+import numpy as np
+from gymnasium import spaces
+from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
+from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
+from stable_baselines3.common.utils import (
+    explained_variance, get_schedule_fn, safe_mean, obs_as_tensor,
+    configure_logger
+)
+from stable_baselines3 import PPO
+import typing
+import torch as th
+from pybts.node import Node
+import time
+from collections import deque
+import sys
+import gymnasium as gym
+from abc import ABC, abstractmethod
+from pybts.rl.common import DummyEnv
+from stable_baselines3.common.policies import ActorCriticPolicy
+from typing import Union
 from pybts.rl.off_policy import *
 from pybts.rl.on_policy import *
-from stable_baselines3.common.base_class import BaseAlgorithm
-from stable_baselines3.common.policies import ActorCriticPolicy
 
 
-class Reward(Node):
-    """
-    奖励节点，返回的状态一直是SUCCESS
-    当走到这个节点时，会将给定的奖励累计
-
-    只会对之后的节点生效，所以要放在前面
-
-    reward: 给出的对应奖励
-    scope: 奖励存储域
-
-    奖励会累积，所以PPO节点在消费奖励时要记录一下上次拿到的奖励值，然后将两次差值作为最终奖励
-    """
-
-    def __init__(self, reward: str | float, scope: str = 'default', **kwargs):
-        super().__init__(**kwargs)
-        self.reward = reward
-        self.scope = scope
-
-    def setup(self, **kwargs: typing.Any) -> None:
-        super().setup(**kwargs)
-        self.reward = self.converter.float(self.reward)
-        self.scope = self.converter.render(self.scope).split(',')  # 域，只会将奖励保存在对应的scope中
-
-    def update(self) -> Status:
-        assert self.context is not None, 'context is not set'
-        if self.context is not None:
-            if 'rl_reward' not in self.context:
-                self.context['rl_reward'] = defaultdict(float)
-            for sc in self.scope:
-                self.context['rl_reward'][sc] += self.reward
-        return Status.SUCCESS
-
-    def to_data(self):
-        return {
-            **super().to_data(),
-            'reward'   : self.reward,
-            'scope'    : self.scope,
-            'rl_reward': self.context['rl_reward'] if self.context is not None else None
-        }
-
-
-class ConditionReward(Decorator):
-    """
-    强化学习奖励装饰节点
-    根据子节点的状态来提供奖励
-
-    success: 子节点成功时给的奖励
-    failure: 子节点失败时给的奖励
-    running: 子节点运行时给的奖励
-    only_on_status_change: 只有在子节点的状态改变时才会提供奖励
-    """
-
-    def __init__(self,
-                 scope: str = 'default',
-                 success: float | str = 1, failure: float | str = 0, running: float | str = 0.5,
-                 only_on_status_change: bool | str = False, **kwargs):
-        super().__init__(**kwargs)
-        self.success = success
-        self.failure = failure
-        self.running = running
-        self.only_on_status_change = only_on_status_change
-        self.scope = scope
-
-        self.reward = 0  # 单次奖励
-        self.accum_reward = 0  # 累积奖励
-
-    def reset(self):
-        super().reset()
-        self.reward = 0
-        self.accum_reward = 0
-
-    def to_data(self):
-        return {
-            **super().to_data(),
-            'scope'                : self.scope,
-            'success'              : self.success,
-            'failure'              : self.failure,
-            'running'              : self.running,
-            'only_on_status_change': self.only_on_status_change,
-            'reward'               : self.reward,
-            'accum_reward'         : self.accum_reward,
-            'context'              : self.context
-        }
-
-    def setup(self, **kwargs: typing.Any) -> None:
-        super().setup(**kwargs)
-        self.success = self.converter.float(self.success)
-        self.failure = self.converter.float(self.failure)
-        self.running = self.converter.float(self.running)
-        self.only_on_status_change = self.converter.bool(self.only_on_status_change)
-        self.scope = self.converter.render(self.scope).split(',')  # 域，只会将奖励保存在对应的scope中
-
-    def update(self) -> Status:
-        new_status = self.decorated.status
-        new_reward = 0
-        if new_status == self.status and self.only_on_status_change:
-            self.reward = new_reward
-            return new_status
-
-        elif new_status == Status.SUCCESS:
-            new_reward = self.success
-        elif new_status == Status.RUNNING:
-            new_reward = self.running
-        elif new_status == Status.FAILURE:
-            new_reward = self.failure
-        self.reward = new_reward
-        self.accum_reward += new_reward
-
-        if self.context is not None:
-            for sc in self.scope:
-                self.context['rl_reward'][sc] += self.reward
-
-        return new_status
-
-
-class RLBaseNode(ABC):
-    """强化学习基础节点，拿来跟其他的Node多继承用"""
+class RLPolicyNode(ABC):
+    """强化学习在线策略节点，拿来跟其他的Node多继承用"""
 
     def __init__(self):
         self.rl_collector = None
@@ -135,7 +34,7 @@ class RLBaseNode(ABC):
         self.rl_iteration = 0
         self.rl_done = False
         self.rl_action = None
-        self.rl_model: Optional[BaseAlgorithm] = None
+        self.rl_model = None
 
     def reset(self):
         self.rl_accum_reward = 0
@@ -207,6 +106,7 @@ class RLBaseNode(ABC):
     def rl_policy(self) -> Union[str, typing.Type[ActorCriticPolicy]]:
         return 'MlpPolicy'
 
+    @abstractmethod
     def rl_take_action(
             self,
             train: bool,
@@ -355,74 +255,3 @@ class RLBaseNode(ABC):
         self.rl_action = action
         self.rl_done = done
         return action
-
-    def rl_setup_model(
-            self,
-            model_class: Union[Type[BaseAlgorithm]],
-            train: bool,
-            path: str,
-            tensorboard_log: str = '',
-            verbose: int = 1,
-            tb_log_name: str = '',
-            **kwargs
-    ):
-        env = DummyEnv(
-                env=self.rl_env(),
-                action_space=self.rl_action_space(),
-                observation_space=self.rl_observation_space())
-        model: typing.Optional[BaseAlgorithm] = None
-
-        if train:
-            model = model_class(
-                    policy=self.rl_policy(),
-                    env=env,
-                    verbose=1,
-                    tensorboard_log=tensorboard_log,
-                    device=self.rl_device(),
-                    **kwargs
-            )
-
-            if path != '':
-                try:
-                    model.set_parameters(
-                            load_path_or_dict=path,
-                            device=self.rl_device()
-                    )
-                except Exception as e:
-                    pass
-        else:
-            assert path != '', f'No model path provided: {path}'
-            model = model_class.load(
-                    path=path,
-                    env=env,
-                    tensorboard_log=tensorboard_log,
-                    verbose=verbose,
-                    force_reset=False,
-                    device=self.rl_device(),
-                    **kwargs
-            )
-
-        if train:
-            if isinstance(model, OffPolicyAlgorithm):
-                bt_off_policy_setup_learn(
-                        model,
-                        tb_log_name=tb_log_name,
-                )
-            elif isinstance(model, OnPolicyAlgorithm):
-                bt_on_policy_setup_learn(
-                        model,
-                        tb_log_name=tb_log_name,
-                        obs=self.rl_gen_obs()
-                )
-            else:
-                raise Exception('Unrecognized model type')
-
-        self.rl_model = model
-        return model
-
-
-if __name__ == '__main__':
-    node = ConditionReward(scope='a,b,c', success='{{1}}/10', children=[Success()])
-    node.setup()
-    print(node.success)
-    print(node.update())

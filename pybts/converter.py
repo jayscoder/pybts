@@ -62,10 +62,10 @@ class Converter:
 
     def render(self, value: str, context: dict = None) -> str:
         ctx = { }
+        # if self.node.attrs is not None:
+        #     ctx.update(self.node.attrs)
         if self.node.context is not None:
             ctx.update(self.node.context)
-        if self.node.attrs is not None:
-            ctx.update(self.node.attrs)
         if context is not None:
             ctx.update(context)
         for key in ctx:

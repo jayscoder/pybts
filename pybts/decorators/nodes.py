@@ -1,6 +1,8 @@
 from __future__ import annotations
 import py_trees
-from pybts.node import Node
+
+import pybts
+from pybts.nodes import Node
 from abc import ABC
 from py_trees.common import Status
 import typing
@@ -585,3 +587,64 @@ class Throttle(Decorator):
         else:
             yield from Node.tick(self)
 
+
+class IsStatusChanged(Decorator):
+    """
+    子节点的状态变化后才会认为是成功
+
+    如果指定了from_status和to_status，则只有子节点的状态由from_status转变到to_status，才会认为是触发了状态变化
+    from_status和to_status均可以由多个状态组成，用逗号分隔
+
+    immediate: 一开始是否会触发一次IsChanged
+    """
+
+    def __init__(self, from_status: str | Status = '', to_status: str | Status = '', immediate: bool | str = False,
+                 **kwargs):
+        super().__init__(**kwargs)
+
+        self.from_status: list[Status] = self.converter.status_list(from_status)
+        self.to_status: list[Status] = self.converter.status_list(to_status)
+        self.immediate: bool = immediate
+        self.last_status = None
+        self.changed_count = 0
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.immediate = self.converter.bool(self.immediate)
+
+    def reset(self):
+        super().reset()
+        self.last_status = None
+        self.changed_count = 0
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'from_status'  : self.from_status,
+            'to_status'    : self.to_status,
+            'immediate'    : self.immediate,
+            'changed_count': self.changed_count
+        }
+
+    def check_is_changed(self):
+        if len(self.from_status) > 0 and self.last_status not in self.from_status:
+            return False
+
+        if len(self.to_status) > 0 and self.decorated.status not in self.to_status:
+            return False
+
+        if self.last_status != self.decorated.status:
+            return True
+        else:
+            return False
+
+    def update(self) -> Status:
+        self.logger.debug("%s.update() %s -> %s" % (self.__class__.__name__, self.last_status, self.decorated.status))
+        if not self.immediate and self.last_status is None:
+            self.last_status = self.decorated.status
+        is_changed = self.check_is_changed()
+        self.last_status = self.decorated.status
+        if is_changed:
+            return Status.SUCCESS
+        else:
+            return Status.FAILURE

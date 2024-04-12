@@ -9,6 +9,7 @@ from pybts.constants import *
 import typing
 import py_trees
 import itertools
+import random
 
 
 class Node(py_trees.behaviour.Behaviour, ABC):
@@ -75,8 +76,9 @@ class Node(py_trees.behaviour.Behaviour, ABC):
             try:
                 new_status = next(self._updater_iter)
                 break
-            except:
+            except StopIteration:
                 self._updater_iter = self.updater()
+        assert isinstance(new_status, Status), f'{self.name}: {new_status} is not a valid status'
         return new_status
 
     def updater(self) -> typing.Iterator[Status]:
@@ -96,7 +98,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 
         # don't set self.status yet, terminate() may need to check what the current state is first
         new_status = self.update()
-
+        assert isinstance(new_status, Status), f'{self.name}: {new_status} is not a valid status'
         if new_status != Status.RUNNING:
             self.stop(new_status)
 
@@ -277,12 +279,12 @@ class IsChanged(Node, Condition):
     <IsChanged value="{{agent.y}}" immediate="false" rule="abs(curr_value - last_value) >= 10">
     """
 
-    def __init__(self, value: str, immediate: bool | str = False, rule: str = '', **kwargs):
+    def __init__(self, value: typing.Any, immediate: bool | str = False, rule: str = '', **kwargs):
         super().__init__(**kwargs)
         self.value = value  # 监听的值
         self.immediate = immediate
         self.last_value = None  # 上一次的值
-        self.curr_value = None  # 当前值
+        self.curr_value = None
         self.changed_count = 0  # 改变次数
         self.rule = rule  # 默认是 curr_value != last_value
 
@@ -296,30 +298,40 @@ class IsChanged(Node, Condition):
         self.curr_value = None
         self.changed_count = 0
 
-    @property
-    def is_changed(self):
+    def check_is_changed(self, curr_value: typing.Any, last_value: typing.Any):
         if self.rule == '':
-            return self.curr_value != self.last_value
+            return curr_value != last_value
         else:
             rule = self.converter.render(self.rule)
             is_changed_value = eval(rule, {
                 **(self.context or { }),
-                'curr_value': self.curr_value,
-                'last_value': self.last_value
+                'curr_value'   : curr_value,
+                'last_value'   : last_value,
+                'changed_count': self.changed_count
             })
             assert isinstance(is_changed_value, bool), 'IsChanged: invalid rule'
             return is_changed_value
 
+    def compute_curr_value(self):
+        if isinstance(self.value, str):
+            return self.converter.render(self.value)
+        else:
+            return self.value
+
     def update(self) -> Status:
-        self.curr_value = self.converter.render(self.value)
+        self.curr_value = self.compute_curr_value()
         if not self.immediate and self.last_value is None:
             # 刚开始不触发
             self.last_value = self.curr_value
 
-        if self.is_changed:
+        is_changed = self.check_is_changed(curr_value=self.curr_value, last_value=self.last_value)
+
+        self.logger.debug(f'{self.last_value} -> {self.curr_value}: {is_changed}')
+
+        self.last_value = self.curr_value
+        if is_changed:
             # 发生了变化
             self.changed_count += 1
-            self.last_value = self.curr_value
             return Status.SUCCESS
         else:
             # 没有发生变化
@@ -330,10 +342,43 @@ class IsChanged(Node, Condition):
             **super().to_data(),
             "immediate"    : self.immediate,
             "last_value"   : self.last_value,
-            "curr_value"   : self.curr_value,
+            'curr_value'   : self.curr_value,
             'changed_count': self.changed_count,
-            'is_changed'   : self.is_changed
         }
+
+
+class IsEqual(Node, Condition):
+    """
+    检查两个值是否相等，值本身可以从context中拿到
+    """
+
+    def __init__(self, a: str, b: str, **kwargs):
+        super().__init__(**kwargs)
+        self.a = a
+        self.b = b
+
+        self.curr_a = None
+        self.curr_b = None
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'curr_a': self.curr_a,
+            'curr_b': self.curr_b
+        }
+
+    def reset(self):
+        super().reset()
+        self.curr_a = None
+        self.curr_b = None
+
+    def update(self):
+        self.curr_a = self.converter.render(self.a)
+        self.curr_b = self.converter.render(self.b)
+        if self.curr_a == self.curr_b:
+            return Status.SUCCESS
+        else:
+            return Status.FAILURE
 
 
 class Print(Action):
@@ -351,3 +396,70 @@ class Print(Action):
             "msg": self.converter.render(self.msg)
         }
 
+
+class RandomIntValue(Node):
+    """
+    生成随机整数到context里
+
+    随机数范围: [low, high], including both end points.
+    """
+
+    def __init__(self, key: str, high: int | str, low: int | str = 0, **kwargs):
+        super().__init__(**kwargs)
+        self.high = high
+        self.low = low
+        self.key = key
+        self.value = None
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.key = self.converter.render(self.key)
+
+    def update(self) -> Status:
+        low = self.converter.int(self.low)
+        high = self.converter.int(self.high)
+
+        self.value = random.randint(low, high)
+        self.context[self.key] = self.value
+        return Status.SUCCESS
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'key'  : self.key,
+            'value': self.value
+        }
+
+
+class RandomFloatValue(Node):
+    """
+    生成随机浮点数到context里
+
+    随机数范围: [low, high), 不包括high
+    """
+
+    def __init__(self, key: str, high: float | str = 1, low: float | str = 0, **kwargs):
+        super().__init__(**kwargs)
+        self.high = high
+        self.low = low
+        self.key = key
+        self.value = None
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.key = self.converter.render(self.key)
+
+    def update(self) -> Status:
+        low = self.converter.float(self.low)
+        high = self.converter.float(self.high)
+
+        self.value = random.random() * (high - low) + low
+        self.context[self.key] = self.value
+        return Status.SUCCESS
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'key'  : self.key,
+            'value': self.value
+        }

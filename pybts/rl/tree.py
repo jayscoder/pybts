@@ -6,7 +6,7 @@ from py_trees.trees import BehaviourTree
 
 from pybts.tree import Tree
 import py_trees
-from pybts.node import Node
+from pybts.nodes import Node
 from collections import defaultdict
 
 

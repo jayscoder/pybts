@@ -1,31 +1,20 @@
-import numpy as np
-from gymnasium import spaces
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
 from stable_baselines3.common.utils import (
-    explained_variance, get_schedule_fn, safe_mean, obs_as_tensor,
     configure_logger, TrainFreq
 )
-from stable_baselines3 import SAC
 import typing
 from collections import deque
-import sys
-import gymnasium as gym
-from abc import ABC, abstractmethod
-from pybts.rl.common import DummyEnv
-import sys
 import time
 import warnings
-from copy import deepcopy
-from typing import Any, Dict, List, Optional, Tuple, Type, TypeVar, Union
-
+from typing import Optional
 import numpy as np
-from stable_baselines3.common.buffers import DictReplayBuffer, ReplayBuffer
-from stable_baselines3.common.noise import ActionNoise, VectorizedActionNoise
+from stable_baselines3.common.buffers import ReplayBuffer
+from stable_baselines3.common.noise import ActionNoise
 from stable_baselines3.common.type_aliases import (
-    GymEnv, MaybeCallback, RolloutReturn, Schedule, TrainFreq,
-    TrainFrequencyUnit
+    RolloutReturn, TrainFreq,
 )
-from stable_baselines3.common.utils import safe_mean, should_collect_more_steps
+from stable_baselines3.common.utils import should_collect_more_steps
+
 
 def bt_off_policy_setup_learn(
         self: OffPolicyAlgorithm,
@@ -154,4 +143,3 @@ def bt_off_policy_collect_rollouts(
                     self._dump_logs()
 
     return RolloutReturn(num_collected_steps * env_num_envs, num_collected_episodes, continue_training)
-

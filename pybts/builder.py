@@ -5,7 +5,7 @@ import os.path
 from typing import Callable
 import xml.etree.ElementTree as ET
 import copy
-from pybts.node import *
+from pybts.nodes import *
 from pybts.composites import *
 from pybts.decorators import *
 import uuid
@@ -73,12 +73,13 @@ class Builder:
 
     def read_text_from_file(self, filepath: str) -> str:
         # 从folder中找文件
+        init_filepath = filepath
         filepath = self.find_filepath(filepath=filepath)
         if filepath != '' and os.path.exists(filepath) and os.path.isfile(filepath):
             with open(filepath, 'r', encoding='utf-8') as file:
                 return file.read()
 
-        raise Exception(f'Cannot find file: {filepath}')
+        raise Exception(f'Cannot find file: {init_filepath}')
 
     def build_from_file(self, filepath: str, attrs: dict = None):
         """
@@ -161,7 +162,8 @@ class Builder:
                 Template,
                 PreCondition,
                 PostCondition,
-                Print
+                Switcher,
+                ReactiveSwitcher,
         )
 
         self.register_node(
@@ -169,7 +171,11 @@ class Builder:
                 Success,
                 Running,
                 IsChanged,
-                IsMatchRule
+                IsMatchRule,
+                IsEqual,
+                Print,
+                RandomIntValue,
+                RandomFloatValue
         )
 
         self.register_node(
@@ -185,6 +191,7 @@ class Builder:
                 SuccessIsRunning,
                 Timeout,
                 Throttle,
+                IsStatusChanged
         )
 
         # 且或非

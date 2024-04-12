@@ -1,6 +1,15 @@
 import typing
 import jinja2
 import json
+from py_trees.common import Status
+from typing import Union
+
+_STATUS_MAP = {
+    'SUCCESS': Status.SUCCESS,
+    'FAILURE': Status.FAILURE,
+    'RUNNING': Status.RUNNING,
+    'INVALID': Status.INVALID
+}
 
 
 class Converter:
@@ -59,6 +68,25 @@ class Converter:
             if callable(ctx[key]):
                 ctx[key] = ctx[key]()
         return eval(value, ctx)
+
+    @classmethod
+    def status(cls, value: Union[str, Status]) -> Status:
+        if isinstance(value, Status):
+            return value
+        value = value.upper()
+        if value not in _STATUS_MAP:
+            raise Exception(f'{value} is not a valid status')
+        return _STATUS_MAP[value]
+
+    @classmethod
+    def status_list(cls, value: Union[str, Status, list[Status]]) -> list[Status]:
+        if isinstance(value, Status):
+            return [value]
+        elif isinstance(value, list):
+            return [cls.status(value=item) for item in value]
+        elif isinstance(value, str):
+            value_list = value.split(',')
+            return [cls.status(value=item) for item in value_list if item != '']
 
     def render(self, value: str, context: dict = None) -> str:
         ctx = { }

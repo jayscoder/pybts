@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import py_trees.blackboard
 
-from pybts.node import *
+from pybts.nodes import *
 from pybts.constants import *
 import yaml
 from queue import Queue

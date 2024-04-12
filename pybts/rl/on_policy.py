@@ -2,13 +2,11 @@ import numpy as np
 from gymnasium import spaces
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.utils import (
-    explained_variance, get_schedule_fn, safe_mean, obs_as_tensor,
+    safe_mean, obs_as_tensor,
     configure_logger
 )
-from stable_baselines3 import PPO
 import typing
 import torch as th
-from pybts.node import Node
 import time
 from collections import deque
 import sys

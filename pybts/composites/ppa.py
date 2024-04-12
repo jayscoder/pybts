@@ -2,7 +2,7 @@ import py_trees
 import typing
 from py_trees.common import Status
 from pybts.composites.parallel import Parallel
-from pybts.node import Condition
+from pybts.nodes import Condition
 
 
 class PreCondition(Parallel, Condition):

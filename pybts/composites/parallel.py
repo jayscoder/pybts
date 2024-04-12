@@ -1,14 +1,7 @@
 from pybts.composites.composite import Composite
-from pybts.composites.sequence import Sequence
-from pybts.composites.selector import Selector
 import py_trees
-from pybts.node import Node
-from abc import ABC
 import typing
 from py_trees.common import Status
-from py_trees import behaviour
-import itertools
-import uuid
 
 
 class Parallel(Composite):
@@ -76,6 +69,7 @@ class Parallel(Composite):
             **super().to_data(),
             'success_threshold': self.success_threshold
         }
+
 
 # class ReactiveParallel(Parallel):
 #     """

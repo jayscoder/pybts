@@ -1,5 +1,5 @@
 import py_trees
-from pybts.node import Node
+from pybts.nodes import Node
 from abc import ABC
 import typing
 from py_trees.common import Status
@@ -258,3 +258,20 @@ class Composite(Node, ABC):
 
         self.status = new_status
         yield self
+
+    def switch_tick(self, index: int, tick_again_status: list[Status]) -> typing.Iterator[py_trees.behaviour.Behaviour]:
+        if self.status in tick_again_status:
+            # 重新执行上次执行的子节点
+            assert self.current_child is not None
+        else:
+            self.current_child = self.children[index]  # 执行对应的index
+
+        yield from self.current_child.tick()
+        for child in self.children:
+            if child != self.current_child:
+                # 清除子节点的状态（停止正在执行的子节点）
+                child.stop(Status.INVALID)
+
+        self.status = self.current_child.status
+        yield self
+

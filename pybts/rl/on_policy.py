@@ -23,10 +23,12 @@ def obs_as_tensor(obs: Union[np.ndarray, Dict[str, np.ndarray]], device: th.devi
     :param device: PyTorch device
     :return: PyTorch tensor of the observation on a desired device.
     """
+    dtype = th.float32 if device == 'mps' else th.float64
+
     if isinstance(obs, np.ndarray):
-        return th.as_tensor(obs, device=device, dtype=th.float32)
+        return th.as_tensor(obs, device=device, dtype=dtype)
     elif isinstance(obs, dict):
-        return { key: th.as_tensor(_obs, device=device, dtype=th.float32) for (key, _obs) in obs.items() }
+        return { key: th.as_tensor(_obs, device=device, dtype=dtype) for (key, _obs) in obs.items() }
     else:
         raise Exception(f"Unrecognized type of observation {type(obs)}")
 

@@ -164,16 +164,12 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     def __repr__(self):
         return self.__str__()
 
-    def get_time(self) -> float:
+    def get_time(self, time: str | float) -> float:
         """获取行为树时间，时间可以由context传入，可以是一个函数"""
-        if self.context is not None and 'time' in self.context:
-            if callable(self.context['time']):
-                return self.context['time']()
-            # 在context传递了time的情况下使用context里的时间，方便使用游戏时间
-            return self.context['time']
-        else:
+        if time == 'time':
             import time
             return time.monotonic()
+        return self.converter.float(time)
 
 
 class Action(Node, ABC):
@@ -463,3 +459,123 @@ class RandomFloatValue(Node):
             'key'  : self.key,
             'value': self.value
         }
+
+
+class RandomSuccess(Node, Condition):
+    """
+    以一定概率成功，其他情况是失败
+    """
+
+    def __init__(self, prob: float | str = 0.5, **kwargs):
+        super().__init__(**kwargs)
+        self.prob = prob
+        self.curr_prob = None
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'curr_prob': self.curr_prob
+        }
+
+    def update(self) -> Status:
+        self.curr_prob = self.converter.float(self.prob)
+        assert 0 <= self.curr_prob <= 1, "Probability must be between 0 and 1"
+        if random.random() < self.curr_prob:
+            return Status.SUCCESS
+        return Status.FAILURE
+
+
+class SetValueToContext(Node):
+    def __init__(self, key: str, value: typing.Any, **kwargs):
+        super().__init__(**kwargs)
+        self.key = key
+        self.value = value
+        self.curr_value = None
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().__init__(**kwargs)
+        self.key = self.converter.render(self.key)
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'key'       : self.key,
+            'curr_value': self.curr_value
+        }
+
+    def compute_curr_value(self) -> typing.Any:
+        return self.converter.render(self.value)
+
+    def update(self) -> Status:
+        self.curr_value = self.compute_curr_value()
+        self.context[self.key] = self.curr_value
+        return Status.SUCCESS
+
+
+class SetIntToContext(SetValueToContext):
+    def compute_curr_value(self) -> typing.Any:
+        return self.converter.int(self.value)
+
+
+class SetFloatToContext(SetValueToContext):
+    def compute_curr_value(self) -> typing.Any:
+        return self.converter.float(self.value)
+
+
+class TimeElapsed(Node, Condition):
+    """
+    时间是否过去了
+    每隔一段时间才会触发一次子节点，其他时间直接返回之前的状态
+    """
+
+    def __init__(self, duration: float | str = 5.0, time: str | float = 'time', immediate: bool | str = False,
+                 **kwargs):
+        """
+        Init with the decorated child and a timeout duration.
+
+        Args:
+            child: the child behaviour or subtree
+            name: the decorator name
+            duration: timeout length in seconds
+            time: 当前时间，传time表示使用系统时间
+            immediate: 一开始是否就触发一次
+        """
+        super().__init__(**kwargs)
+        self.duration = duration
+        self.immediate = immediate
+        self.time = time
+
+        self.curr_duration = None
+        self.last_time = None
+        self.curr_time = None
+
+    def reset(self):
+        super().reset()
+        self.last_time = None
+        self.curr_time = None
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.immediate = self.converter.bool(self.immediate)
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'immediate'    : self.immediate,
+            'curr_time'    : self.curr_time,
+            'last_time'    : self.last_time,
+            'curr_duration': self.curr_duration,
+        }
+
+    def update(self) -> Status:
+        self.curr_time = self.get_time(self.time)
+        self.curr_duration = self.converter.float(self.duration)
+
+        if self.last_time is None:
+            self.last_time = self.curr_time
+            return Status.SUCCESS if self.immediate else Status.FAILURE
+
+        if self.curr_time - self.last_time >= self.curr_duration:
+            self.last_time = self.curr_time
+            return Status.SUCCESS
+        return Status.FAILURE

@@ -69,7 +69,7 @@ class Server:
                         "title": "下载XML",
                         "icon" : "",
                     },
-                    "myTool3": {
+                    "myTool3"    : {
                         "show" : True,
                         "title": "展示信息",
                         "icon" : "",
@@ -153,32 +153,52 @@ class Server:
     def send_static(self, path):
         return send_from_directory(STATIC_DIR, path)
 
-    def get_projects(self):
+    def get_projects(self, dirpath: str):
         # 获取log_dir里面的所有的文件夹
-        projects = []
-        if not os.path.exists(self.log_dir):
+        if not os.path.exists(dirpath):
             return []
 
-        for dirpath, dirnames, filenames in os.walk(self.log_dir):
-            if 'pybts.json' in filenames:
-                relative_path = os.path.relpath(dirpath, self.log_dir)
-                pybts_data = self._get_pybts_data(project=relative_path)
-                if pybts_data is None:
-                    continue
+        projects = []
+        if os.path.isdir(dirpath):
+            for filename in os.listdir(dirpath):
+                if filename == 'pybts.json':
+                    relative_path = os.path.relpath(dirpath, self.log_dir)
+                    pybts_data = self._get_pybts_data(project=relative_path)
+                    if pybts_data is None:
+                        continue
+                    projects.append({
+                        'name'         : relative_path,
+                        'unread'       : pybts_data.get('id') - self.last_read_id,
+                        'total'        : pybts_data['id'],
+                        'modified_time': os.path.getmtime(os.path.join(dirpath, 'pybts.json'))
+                    })
+                    return projects
 
-                projects.append({
-                    'name'  : relative_path,
-                    'unread': pybts_data.get('id') - self.last_read_id,
-                    'total' : pybts_data['id'],
-                    'modified_time': os.path.getmtime(os.path.join(dirpath, 'pybts.json'))
-                })
+            for filename in os.listdir(dirpath):
+                sub_dirpath = os.path.join(dirpath, filename)
+                if os.path.isdir(sub_dirpath):
+                    projects.extend(self.get_projects(sub_dirpath))
+
+        # for dirpath, dirnames, filenames in os.walk(self.log_dir):
+        #     if 'pybts.json' in filenames:
+        #         relative_path = os.path.relpath(dirpath, self.log_dir)
+        #         pybts_data = self._get_pybts_data(project=relative_path)
+        #         if pybts_data is None:
+        #             continue
+        #
+        #         projects.append({
+        #             'name'         : relative_path,
+        #             'unread'       : pybts_data.get('id') - self.last_read_id,
+        #             'total'        : pybts_data['id'],
+        #             'modified_time': os.path.getmtime(os.path.join(dirpath, 'pybts.json'))
+        #         })
 
         # 按照modified_time排序
         sorted_projects = sorted(projects, key=lambda project: project['modified_time'])
         return sorted_projects
 
     def get_config(self):
-        projects = self.get_projects()
+        projects = self.get_projects(self.log_dir)
         return jsonify({
             'title'          : self.title,
             'update_interval': self.update_interval,

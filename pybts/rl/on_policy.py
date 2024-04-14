@@ -1,15 +1,34 @@
 import numpy as np
+import torch
 from gymnasium import spaces
 from stable_baselines3.common.on_policy_algorithm import OnPolicyAlgorithm
 from stable_baselines3.common.utils import (
-    safe_mean, obs_as_tensor,
+    safe_mean,
     configure_logger
 )
+from stable_baselines3.common.type_aliases import GymEnv, Schedule, TensorDict, TrainFreq, TrainFrequencyUnit
 import typing
 import torch as th
 import time
 from collections import deque
 import sys
+from typing import Union, Dict
+
+
+def obs_as_tensor(obs: Union[np.ndarray, Dict[str, np.ndarray]], device: th.device) -> Union[th.Tensor, TensorDict]:
+    """
+    Moves the observation to the given device.
+    为了兼容mps，数据值用float32来保存
+    :param obs:
+    :param device: PyTorch device
+    :return: PyTorch tensor of the observation on a desired device.
+    """
+    if isinstance(obs, np.ndarray):
+        return th.as_tensor(obs, device=device, dtype=th.float32)
+    elif isinstance(obs, dict):
+        return { key: th.as_tensor(_obs, device=device, dtype=th.float32) for (key, _obs) in obs.items() }
+    else:
+        raise Exception(f"Unrecognized type of observation {type(obs)}")
 
 
 def bt_on_policy_setup_learn(
@@ -130,13 +149,15 @@ def bt_on_policy_collect_rollouts(self: OnPolicyAlgorithm, last_obs) -> typing.G
 
         # Handle timeout by bootstraping with value function
         # see GitHub issue #633
+        # 在环境因达到最大步数而非自然终止时，提供一个合理的未来价值估计，从而帮助学习算法更好地理解和学习到达该状态的长期影响。
+        # 这种处理方式是对传统强化学习中的处理截断问题的一种常见实践。
+        # 在没有这种处理时，算法可能会错误地认为达到步数限制是一种负面的结果，而实际上它仅仅是由环境的设定导致的。
         for idx, done in enumerate(dones):
             if (
                     done
-                    and infos[idx].get("terminal_observation") is not None
-                    and infos[idx].get("TimeLimit.truncated", False)
+                    and infos[idx].get("truncated", False)
             ):
-                terminal_obs = self.policy.obs_to_tensor(infos[idx]["terminal_observation"])[0]
+                terminal_obs = obs_as_tensor(self._last_obs, self.device)
                 with th.no_grad():
                     terminal_value = self.policy.predict_values(terminal_obs)[0]  # type: ignore[arg-type]
                 rewards[idx] += self.gamma * terminal_value
@@ -149,6 +170,9 @@ def bt_on_policy_collect_rollouts(self: OnPolicyAlgorithm, last_obs) -> typing.G
                 values,
                 log_probs,
         )
+        # print(
+        #         f'collector_{self.n_steps}: {n_steps} actions={actions.tolist()} rewards={rewards.tolist()} dones={dones.tolist()} values={values.tolist()}')
+
         self._last_obs = new_obs  # type: ignore[assignment]
         self._last_episode_starts = dones
 

@@ -191,14 +191,11 @@ class OneShot(Decorator):
             name: the decorator name
             policy: policy determining when the oneshot should activate
             - SUCCESS
-            - SUCCESS|FAILURE
+            - SUCCESS,FAILURE
         """
         super(OneShot, self).__init__(**kwargs)
         self.final_status: typing.Optional[Status] = None
-        if isinstance(policy, str):
-            self.policy = list(map(lambda x: Status(x), policy.split('|')))
-        else:
-            self.policy = policy
+        self.policy = policy
 
     def to_data(self):
         return {
@@ -206,6 +203,14 @@ class OneShot(Decorator):
             'policy'      : self.policy,
             'final_status': self.final_status
         }
+
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.policy = self.converter.status_list(self.policy)
+
+    def reset(self):
+        super().reset()
+        self.final_status = None
 
     def update(self) -> Status:
         """
@@ -269,7 +274,7 @@ class Timeout(Decorator):
     as that of it's encapsulated behaviour.
     """
 
-    def __init__(self, duration: float = 5.0, **kwargs):
+    def __init__(self, duration: float = 5.0, time: str | float = 'time', **kwargs):
         """
         Init with the decorated child and a timeout duration.
 
@@ -277,10 +282,12 @@ class Timeout(Decorator):
             child: the child behaviour or subtree
             name: the decorator name
             duration: timeout length in seconds
+            time: 传time表示使用系统时间，{{time}}表示使用context里的时间
         """
         super(Timeout, self).__init__(**kwargs)
         self.duration = duration
         self.finish_time = 0.0
+        self.time = time
 
     def setup(self, **kwargs: typing.Any) -> None:
         super().setup(**kwargs)
@@ -292,7 +299,7 @@ class Timeout(Decorator):
 
     def initialise(self) -> None:
         """Reset the feedback message and finish time on behaviour entry."""
-        self.finish_time = self.get_time() + self.duration
+        self.finish_time = self.get_time(self.time) + self.duration
         self.feedback_message = ""
 
     def update(self) -> Status:
@@ -306,7 +313,7 @@ class Timeout(Decorator):
         Returns:
             the behaviour's new status :class:`~py_trees.common.Status`
         """
-        current_time = self.get_time()
+        current_time = self.get_time(self.time)
         if (
                 self.decorated.status == Status.RUNNING
                 and current_time > self.finish_time
@@ -555,7 +562,7 @@ class Throttle(Decorator):
     每隔一段时间才会触发一次子节点，其他时间直接返回之前的状态
     """
 
-    def __init__(self, duration: float | str = 5.0, **kwargs):
+    def __init__(self, duration: float | str = 5.0, time: str | float = 'time', **kwargs):
         """
         Init with the decorated child and a timeout duration.
 
@@ -563,10 +570,13 @@ class Throttle(Decorator):
             child: the child behaviour or subtree
             name: the decorator name
             duration: timeout length in seconds
+            time: 当前时间，传time表示使用系统时间
         """
         super().__init__(**kwargs)
         self.duration = duration
         self.last_time = -float('inf')
+        self.time = time
+        self.curr_time = None
 
     def reset(self):
         super().reset()
@@ -580,9 +590,9 @@ class Throttle(Decorator):
         return self.decorated.status
 
     def tick(self):
-        now_time = self.get_time()
-        if now_time - self.last_time >= self.duration:
-            self.last_time = now_time
+        self.curr_time = self.get_time(self.time)
+        if self.curr_time - self.last_time >= self.duration:
+            self.last_time = self.curr_time
             yield from Decorator.tick(self)
         else:
             yield from Node.tick(self)
@@ -648,3 +658,17 @@ class IsStatusChanged(Decorator):
             return Status.SUCCESS
         else:
             return Status.FAILURE
+
+
+class PrintNodeData(Decorator):
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+
+    def update(self) -> Status:
+        print(self.decorated.to_data())
+        return Status.SUCCESS
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+        }

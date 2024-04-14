@@ -175,7 +175,13 @@ class Builder:
                 IsEqual,
                 Print,
                 RandomIntValue,
-                RandomFloatValue
+                RandomFloatValue,
+                RandomSuccess,
+                SetValueToContext,
+                SetIntToContext,
+                SetFloatToContext,
+                TimeElapsed,
+                PrintNodeData
         )
 
         self.register_node(

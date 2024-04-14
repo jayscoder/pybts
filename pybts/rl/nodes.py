@@ -29,27 +29,28 @@ class Reward(Node):
         super().__init__(**kwargs)
         self.reward = reward
         self.scope = scope
+        self.curr_reward = 0
 
     def setup(self, **kwargs: typing.Any) -> None:
         super().setup(**kwargs)
-        self.reward = self.converter.float(self.reward)
         self.scope = self.converter.render(self.scope).split(',')  # 域，只会将奖励保存在对应的scope中
 
     def update(self) -> Status:
         assert self.context is not None, 'context is not set'
+        self.curr_reward = self.converter.float(self.reward)
         if self.context is not None:
-            if 'rl_reward' not in self.context:
-                self.context['rl_reward'] = defaultdict(float)
+            if 'reward' not in self.context:
+                self.context['reward'] = defaultdict(float)
             for sc in self.scope:
-                self.context['rl_reward'][sc] += self.reward
+                self.context['reward'][sc] += self.curr_reward
         return Status.SUCCESS
 
     def to_data(self):
         return {
-            **super().to_data(),
-            'reward'   : self.reward,
-            'scope'    : self.scope,
-            'rl_reward': self.context['rl_reward'] if self.context is not None else None
+            # **super().to_data(),
+            'curr_reward'   : self.curr_reward,
+            'scope'         : self.scope,
+            'context_reward': dict(self.context['reward'])
         }
 
 
@@ -122,7 +123,7 @@ class ConditionReward(Decorator):
 
         if self.context is not None:
             for sc in self.scope:
-                self.context['rl_reward'][sc] += self.reward
+                self.context['reward'][sc] += self.reward
 
         return new_status
 
@@ -192,11 +193,11 @@ class RLBaseNode(ABC):
         if reward_scope != '':
             assert isinstance(self, Node), 'RLOnPolicyNode 必须得继承Node节点'
             assert self.context is not None, 'context必须得设置好'
-            assert 'rl_reward' in self.context, 'context必须得含有rl_reward键'
+            assert 'reward' in self.context, 'context必须得含有rl_reward键'
             scopes = reward_scope.split(',')
             curr_reward = 0
             for scope in scopes:
-                curr_reward += self.context['rl_reward'].get(scope, 0)
+                curr_reward += self.context['reward'].get(scope, 0)
             return curr_reward - self.rl_accum_reward
         raise NotImplemented
 
@@ -215,29 +216,26 @@ class RLBaseNode(ABC):
             self,
             train: bool,
             log_interval: int = 1,
-            save_interval: int = 5,
-            save_path: str = ''
+            deterministic: bool = False,
     ):
         if isinstance(self.rl_model, OnPolicyAlgorithm):
             return self._rl_on_policy_take_action(
                     train=train,
                     log_interval=log_interval,
-                    save_interval=save_interval,
-                    save_path=save_path)
+                    deterministic=deterministic
+            )
         else:
             return self._rl_off_policy_take_action(
                     train=train,
                     log_interval=log_interval,
-                    save_interval=save_interval,
-                    save_path=save_path
+                    deterministic=deterministic
             )
 
     def _rl_off_policy_take_action(
             self,
             train: bool,
             log_interval: int = 1,
-            save_interval: int = 5,
-            save_path: str = ''
+            deterministic: bool = False,
     ):
         assert self.rl_model is not None, 'RL model not initialized'
         assert isinstance(self.rl_model, OffPolicyAlgorithm), 'RL model must be initialized with OffPolicyAlgorithm'
@@ -288,9 +286,6 @@ class RLBaseNode(ABC):
                 self.rl_iteration += 1
                 # Display training infos
 
-                if self.rl_iteration % save_interval == 0:
-                    model.save(save_path)
-
                 self.rl_collector = bt_off_policy_collect_rollouts(
                         model,
                         train_freq=model.train_freq,
@@ -302,7 +297,7 @@ class RLBaseNode(ABC):
                 action = self.rl_collector.send(None)
         else:
             # 预测模式
-            action, state = model.predict(obs)
+            action, state = model.predict(obs, deterministic=deterministic)
 
         self.rl_obs = obs
         self.rl_reward = reward
@@ -316,8 +311,7 @@ class RLBaseNode(ABC):
             self,
             train: bool,
             log_interval: int = 1,
-            save_interval: int = 5,
-            save_path: str = ''
+            deterministic: bool = False,
     ):
         assert self.rl_model is not None, 'RL model not initialized'
         assert isinstance(self.rl_model, OnPolicyAlgorithm), 'RL model must be an instance of OnPolicyAlgorithm'
@@ -341,8 +335,6 @@ class RLBaseNode(ABC):
                 self.rl_iteration += 1
                 # Display training infos
                 bt_on_policy_train(model, iteration=self.rl_iteration, log_interval=log_interval)
-                if self.rl_iteration % save_interval == 0:
-                    model.save(save_path)
 
                 self.rl_collector = bt_on_policy_collect_rollouts(
                         model,
@@ -350,7 +342,7 @@ class RLBaseNode(ABC):
                 action = self.rl_collector.send(None)
         else:
             # 预测模式
-            action, state = model.predict(obs)
+            action, state = model.predict(obs, deterministic=deterministic)
 
         self.rl_obs = obs
         self.rl_reward = reward
@@ -380,7 +372,7 @@ class RLBaseNode(ABC):
             model = model_class(
                     policy=self.rl_policy(),
                     env=env,
-                    verbose=1,
+                    verbose=verbose,
                     tensorboard_log=tensorboard_log,
                     device=self.rl_device(),
                     **kwargs

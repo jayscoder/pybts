@@ -72,11 +72,11 @@ class RLPolicyNode(ABC):
         if reward_scope != '':
             assert isinstance(self, Node), 'RLOnPolicyNode 必须得继承Node节点'
             assert self.context is not None, 'context必须得设置好'
-            assert 'rl_reward' in self.context, 'context必须得含有rl_reward键'
+            assert 'reward' in self.context, 'context必须得含有rl_reward键'
             scopes = reward_scope.split(',')
             curr_reward = 0
             for scope in scopes:
-                curr_reward += self.context['rl_reward'].get(scope, 0)
+                curr_reward += self.context['reward'].get(scope, 0)
             return curr_reward - self.rl_accum_reward
         raise NotImplemented
 

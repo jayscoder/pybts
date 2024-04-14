@@ -89,6 +89,9 @@ class Converter:
             return [cls.status(value=item) for item in value_list if item != '']
 
     def render(self, value: str, context: dict = None) -> str:
+        if '{{' not in value or '}}' not in value:
+            return value
+
         ctx = { }
         # if self.node.attrs is not None:
         #     ctx.update(self.node.attrs)
@@ -99,7 +102,16 @@ class Converter:
         for key in ctx:
             if callable(ctx[key]):
                 ctx[key] = ctx[key]()
-        return jinja2.Template(value).render(ctx)
+
+        for i in range(3):
+            # 最多嵌套3层
+            rendered_value = jinja2.Template(value).render(ctx)
+            if '{{' not in rendered_value or '}}' not in rendered_value:
+                return rendered_value
+            if rendered_value == value:
+                return rendered_value
+            value = rendered_value
+        return value
 
     def list(self, value: typing.Any) -> typing.List[typing.Any]:
         if isinstance(value, str):

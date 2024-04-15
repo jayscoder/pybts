@@ -129,6 +129,7 @@ def bt_on_policy_collect_rollouts(self: OnPolicyAlgorithm, last_obs) -> typing.G
                 clipped_actions = np.clip(actions, self.action_space.low, self.action_space.high)
 
         new_obs, rewards, dones, infos = yield clipped_actions[0]
+
         # 数据都从单个处理成批量的
         new_obs = np.expand_dims(new_obs, axis=0)
         rewards = np.array([rewards])

@@ -48,6 +48,10 @@ class Node(py_trees.behaviour.Behaviour, ABC):
             for child in children:
                 child.parent = self
 
+    def setup(self, **kwargs: typing.Any) -> None:
+        super().setup(**kwargs)
+        self.name = self.converter.render(self.name)
+    
     def reset(self):
         self.debug_info['reset_count'] += 1
         self._updater_iter = None

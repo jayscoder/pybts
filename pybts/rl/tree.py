@@ -21,6 +21,7 @@ class RLTree(Tree):
 
     def reset(self):
         super().reset()
+        # 先reset所有节点再清空奖励
         # 清空奖励
         self.context['reward'] = defaultdict(int)
 

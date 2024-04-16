@@ -15,6 +15,10 @@ def _echarts_color(color: str) -> str:
     return f'rgb({r},{g},{b})'
 
 
+def _pydot_color(color: str) -> str:
+    return f'#{color}'
+
+
 # Map of color names to RGB values
 ECHARTS_COLORS = {
     # "red"   : _echarts_color('d81e06'),
@@ -34,6 +38,24 @@ ECHARTS_COLORS = {
     'white'     : _echarts_color('ffffff')
 }
 
+PYDOT_COLORS = {
+    # "red"   : _echarts_color('d81e06'),
+    "red"       : _pydot_color('F95D7B'),
+    # "blue"  : _echarts_color('1296db'), # 0AD2F3
+    'blue'      : _pydot_color('0AD2F3'),
+    # "green" : _echarts_color('1afa29'),
+    'green'     : _pydot_color('3BBD73'),
+    "pink"      : _pydot_color('d4237a'),
+    'purple'    : _pydot_color('AB69E9'),
+    # "yellow": _echarts_color('f4ea2a'),
+    'yellow'    : _pydot_color('FED969'),
+    # "grey"  : _echarts_color('8a8a8a'),
+    'grey'      : _pydot_color('888888'),
+    'light_grey': _pydot_color('bbbbbb'),
+    'black'     : _pydot_color('555555'),
+    'white'     : _pydot_color('ffffff')
+}
+
 STATUS_TO_ECHARTS_SYMBOL_COLORS = {
     Status.SUCCESS.name: ECHARTS_COLORS['blue'],
     Status.FAILURE.name: ECHARTS_COLORS['red'],
@@ -41,11 +63,25 @@ STATUS_TO_ECHARTS_SYMBOL_COLORS = {
     Status.INVALID.name: ECHARTS_COLORS['grey'],
 }
 
+STATUS_TO_PYDOT_SYMBOL_COLORS = {
+    Status.SUCCESS.name: PYDOT_COLORS['blue'],
+    Status.FAILURE.name: PYDOT_COLORS['red'],
+    Status.RUNNING.name: PYDOT_COLORS['yellow'],
+    Status.INVALID.name: PYDOT_COLORS['grey'],
+}
+
 STATUS_TO_ECHARTS_LINE_STYLE_COLOR = {
     Status.SUCCESS.name: ECHARTS_COLORS['light_grey'],
     Status.FAILURE.name: ECHARTS_COLORS['light_grey'],
     Status.RUNNING.name: ECHARTS_COLORS['light_grey'],
     Status.INVALID.name: ECHARTS_COLORS['light_grey'],
+}
+
+STATUS_TO_PYDOT_LINE_STYLE_COLOR = {
+    Status.SUCCESS.name: PYDOT_COLORS['light_grey'],
+    Status.FAILURE.name: PYDOT_COLORS['light_grey'],
+    Status.RUNNING.name: PYDOT_COLORS['light_grey'],
+    Status.INVALID.name: PYDOT_COLORS['light_grey'],
 }
 
 
@@ -58,6 +94,22 @@ class ECHARTS_SYMBOLS:
     PIN = 'pin'
     ARROW = 'arrow'
     NONE = 'none'
+
+
+class PYDOTS_SHAPES:
+    """
+  https://www.graphviz.org/doc/info/shapes.html
+  """
+    CIRCLE = 'circle'
+    BOX = 'box'
+    ELLIPSE = 'ellipse'
+    DIAMOND = 'diamond'
+    TRIANGLE = 'triangle'
+    PLAINTEXT = 'plaintext'
+    EGG = 'egg'
+    PLAIN = 'plain'
+    PARALLELOGRAM = 'parallelogram'
+    OCTAGON = 'octagon'
 
 
 class BT_NODE_TYPE:
@@ -73,6 +125,13 @@ BT_NODE_TYPE_TO_ECHARTS_SYMBOLS = {
     BT_NODE_TYPE.DECORATOR: ECHARTS_SYMBOLS.CIRCLE,
     BT_NODE_TYPE.ACTION   : ECHARTS_SYMBOLS.RECT,
     BT_NODE_TYPE.CONDITION: ECHARTS_SYMBOLS.DIAMOND
+}
+
+BT_NODE_TYPE_TO_PYDOT_SHAPE = {
+    BT_NODE_TYPE.COMPOSITE: PYDOTS_SHAPES.PARALLELOGRAM,
+    BT_NODE_TYPE.DECORATOR: PYDOTS_SHAPES.ELLIPSE,
+    BT_NODE_TYPE.ACTION   : PYDOTS_SHAPES.BOX,
+    BT_NODE_TYPE.CONDITION: PYDOTS_SHAPES.BOX
 }
 
 BT_NODE_TYPE_TO_ECHARTS_SYMBOL_SIZE = {

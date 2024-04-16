@@ -1,6 +1,7 @@
 from __future__ import annotations
 from py_trees import common
 import pybts
+from pybts.display import render_node
 
 class Person(pybts.Action):
     def __init__(self, age: int | str, **kwargs):
@@ -23,16 +24,21 @@ class Person(pybts.Action):
             }
         }
 
-builder = pybts.builder.Builder()
-builder.register_node(Person)
-root = builder.build_from_file('demos/demo_bt.xml')
-tree = pybts.Tree(root=root, name='Person')
 
-board = pybts.board.Board(tree=tree, log_dir='logs')
+def main():
+    builder = pybts.builder.Builder()
+    builder.register_node(Person)
+    root = builder.build_from_file('demos/demo_bt.xml')
+    tree = pybts.Tree(root=root, name='Person')
+    # board = pybts.board.Board(tree=tree, log_dir='logs')
+    render_node(tree.root, filepath='demo-tree.jpg', fontsize=24)
+
 
 if __name__ == '__main__':
-    for node in tree.root.iterate():
-        print(node.__str__())
+    main()
+
+    # for node in tree.root.iterate():
+    #     print(node.__str__())
 
     # pybts.logging.level = pybts.logging.Level.DEBUG
     # for data in board.iterate():

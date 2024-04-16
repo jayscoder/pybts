@@ -1,8 +1,14 @@
 <Sequence>
     <Person name="小红" age="123"/>
+    <Success/>
+    <Failure/>
+    <Inverter>
+        <Failure/>
+    </Inverter>
     <Parallel>
         <template scope="pre-condition">
             <Selector>
+                <Success/>
                 <Sequence>
                     <Person name="小红" age="123"/>
                     <Parallel>

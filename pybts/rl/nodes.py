@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from typing import Union, Type
 import gymnasium as gym
 from pybts.rl.common import DummyEnv
+from stable_baselines3.common.logger import Logger
 
 
 class Reward(Node):
@@ -357,9 +358,10 @@ class RLBaseNode(ABC):
             model_class: Union[Type[BaseAlgorithm]],
             train: bool,
             path: str,
-            tensorboard_log: str = '',
+            logger: Logger | None = None,
+            tensorboard_log: str | None = None,
+            tb_log_name: str | None = None,
             verbose: int = 1,
-            tb_log_name: str = '',
             **kwargs
     ):
         env = DummyEnv(
@@ -368,13 +370,14 @@ class RLBaseNode(ABC):
                 observation_space=self.rl_observation_space())
         model: typing.Optional[BaseAlgorithm] = None
 
+
         if train:
             model = model_class(
                     policy=self.rl_policy(),
                     env=env,
                     verbose=verbose,
-                    tensorboard_log=tensorboard_log,
                     device=self.rl_device(),
+                    tensorboard_log=tensorboard_log,
                     **kwargs
             )
 
@@ -391,12 +394,13 @@ class RLBaseNode(ABC):
             model = model_class.load(
                     path=path,
                     env=env,
-                    tensorboard_log=tensorboard_log,
                     verbose=verbose,
                     force_reset=False,
                     device=self.rl_device(),
                     **kwargs
             )
+        if logger is not None:
+            model.set_logger(logger=logger)
 
         if train:
             if isinstance(model, OffPolicyAlgorithm):
@@ -407,8 +411,8 @@ class RLBaseNode(ABC):
             elif isinstance(model, OnPolicyAlgorithm):
                 bt_on_policy_setup_learn(
                         model,
-                        tb_log_name=tb_log_name,
-                        obs=self.rl_gen_obs()
+                        obs=self.rl_gen_obs(),
+                        tb_log_name=tb_log_name
                 )
             else:
                 raise Exception('Unrecognized model type')

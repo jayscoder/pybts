@@ -1,4 +1,5 @@
 from stable_baselines3.common.off_policy_algorithm import OffPolicyAlgorithm
+
 from stable_baselines3.common.utils import (
     configure_logger, TrainFreq
 )
@@ -23,7 +24,6 @@ def bt_off_policy_setup_learn(
         total_timesteps: int = 10000,
 ):
     replay_buffer = self.replay_buffer
-
     truncate_last_traj = (
             self.optimize_memory_usage
             and reset_num_timesteps

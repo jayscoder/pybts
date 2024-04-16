@@ -3,6 +3,8 @@ import jinja2
 import json
 from py_trees.common import Status
 from typing import Union
+import math
+import random
 
 _STATUS_MAP = {
     'SUCCESS': Status.SUCCESS,
@@ -41,33 +43,23 @@ class Converter:
                 return True
             elif value.lower() == 'false':
                 return False
-            return bool(eval(self.render(value)))
+            return bool(self.eval(self.render(value)))
         return bool(value)
 
     def float(self, value: typing.Any):
         if isinstance(value, str):
-            return eval(self.render(value))
+            return float(self.eval(self.render(value)))
         else:
             return float(value)
 
     def int(self, value: typing.Any):
         if isinstance(value, str):
-            return int(eval(self.render(value)))
+            return int(self.eval(self.render(value)))
         else:
             return int(value)
 
-    def eval(self, value: str, context: dict = None):
-        ctx = { }
-        if self.node.context is not None:
-            ctx.update(self.node.context)
-        if self.node.attrs is not None:
-            ctx.update(self.node.attrs)
-        if context is not None:
-            ctx.update(context)
-        for key in ctx:
-            if callable(ctx[key]):
-                ctx[key] = ctx[key]()
-        return eval(value, ctx)
+    def eval(self, value: str):
+        return eval(value, self.node.context, { 'math': math, 'random': random })
 
     @classmethod
     def status(cls, value: Union[str, Status]) -> Status:
@@ -88,24 +80,13 @@ class Converter:
             value_list = value.split(',')
             return [cls.status(value=item) for item in value_list if item != '']
 
-    def render(self, value: str, context: dict = None) -> str:
+    def render(self, value: str) -> str:
         if '{{' not in value or '}}' not in value:
             return value
 
-        ctx = { }
-        # if self.node.attrs is not None:
-        #     ctx.update(self.node.attrs)
-        if self.node.context is not None:
-            ctx.update(self.node.context)
-        if context is not None:
-            ctx.update(context)
-        for key in ctx:
-            if callable(ctx[key]):
-                ctx[key] = ctx[key]()
-
         for i in range(3):
             # 最多嵌套3层
-            rendered_value = jinja2.Template(value).render(ctx)
+            rendered_value = jinja2.Template(value).render(self.node.context, math=math, random=random)
             if '{{' not in rendered_value or '}}' not in rendered_value:
                 return rendered_value
             if rendered_value == value:
@@ -127,11 +108,17 @@ class Converter:
                     return value.tolist()
             except ImportError:
                 pass
+            try:
+                import torch
+                if isinstance(value, torch.Tensor):
+                    return value.cpu().tolist()
+            except ImportError:
+                pass
             raise Exception(f'array error {value}')
 
     def dict(self, value: typing.Any) -> typing.Dict[str, typing.Any]:
         if isinstance(value, str):
-            return eval(self.render(value))
+            return self.eval(self.render(value))
         elif isinstance(value, dict):
             return value
         else:

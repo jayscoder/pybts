@@ -51,12 +51,18 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     def setup(self, **kwargs: typing.Any) -> None:
         super().setup(**kwargs)
         self.name = self.converter.render(self.name)
-    
+
     def reset(self):
         self.debug_info['reset_count'] += 1
         self._updater_iter = None
         if self.status != Status.INVALID:
             self.stop(Status.INVALID)
+
+    @property
+    def label(self):
+        if 'label' in self.attrs:
+            return self.converter.render(self.attrs['label'])
+        return self.name
 
     @property
     def converter(self):

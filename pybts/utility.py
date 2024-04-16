@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import py_trees.blackboard
 
-from pybts.nodes import *
 from pybts.constants import *
 import yaml
 from queue import Queue
@@ -30,9 +29,12 @@ def read_queue_without_destroying(q: Queue):
 
 
 def bt_to_node_type(node: py_trees.behaviour.Behaviour) -> str:
-    if isinstance(node, py_trees.composites.Composite):
+    from pybts.nodes import Condition
+    from pybts.composites import Composite
+    from pybts.decorators import Decorator
+    if isinstance(node, py_trees.composites.Composite) or isinstance(node, Composite):
         return BT_NODE_TYPE.COMPOSITE
-    elif isinstance(node, py_trees.decorators.Decorator):
+    elif isinstance(node, py_trees.decorators.Decorator) or isinstance(node, Decorator):
         return BT_NODE_TYPE.DECORATOR
     elif isinstance(node, Condition):
         return BT_NODE_TYPE.CONDITION
@@ -44,6 +46,7 @@ def bt_to_json(node: py_trees.behaviour.Behaviour,
                ignore_children: bool = False,
                ignore_attrs: list = None,
                ignore_to_data: bool = False) -> dict:
+    from pybts.nodes import Node
     try:
         info = {
             'tag'     : node.__class__.__name__,

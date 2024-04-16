@@ -8,7 +8,12 @@ from pybts.tree import Tree
 
 
 class Board:
-    def __init__(self, tree: Tree, log_dir: str = '.', render: bool = False, render_format: str = 'png'):
+    def __init__(self, tree: Tree, log_dir: str = '.'):
+        """
+        :param tree: Board监听的树
+        :param log_dir: Board的日志存储目录
+
+        """
         self.tree = tree
         self.project = tree.name
         self.log_dir = os.path.join(log_dir, self.project)
@@ -16,10 +21,8 @@ class Board:
         self.current_path = os.path.join(self.log_dir, 'pybts.json')
         os.makedirs(self.history_dir, exist_ok=True)
         self.track_id = 0
-        self.render = render
-        self.render_format = render_format
 
-    def track(self, info: dict = None):
+    def track(self, info: dict = None, render: bool = False, render_format: str = 'png'):
         """
         track当前运行信息
         :param info: 额外信息
@@ -49,9 +52,9 @@ class Board:
                 raise e
         with open(self.current_path, 'w') as f:
             utility.json_dump(json_data, f, ensure_ascii=False)
-        if self.render:
+        if render:
             from pybts.display import render_node
-            render_path = os.path.join(self.history_dir, f'{self.track_id}.{self.render_format}')
+            render_path = os.path.join(self.history_dir, f'{self.track_id}.{render_format}')
             render_node(node=self.tree.root, filepath=render_path)
 
     def clear(self):

@@ -1,3 +1,4 @@
+from __future__ import annotations
 import py_trees
 from pybts.nodes import Node
 from abc import ABC
@@ -215,12 +216,12 @@ class Composite(Node, ABC):
         child.parent = self
         return child.id
 
-    def SEQ_SEL_tick(
+    def seq_sel_tick(
             self,
             tick_again_status: list[Status],
             continue_status: list[Status],
             no_child_status: Status,
-            start_index: int = 0
+            start_index: int | typing.Callable[['Composite'], int] = 0
     ):
         """Sequence/Selector的tick逻辑"""
         self.debug_info['tick_count'] += 1
@@ -232,6 +233,8 @@ class Composite(Node, ABC):
             index = self.children.index(self.current_child)
         else:
             self.current_child = None  # 从头执行
+            if callable(start_index):
+                start_index = start_index(self)
             index = start_index
 
         for child in itertools.islice(self.children, index, None):
@@ -252,18 +255,21 @@ class Composite(Node, ABC):
         else:
             new_status = no_child_status
 
-        # TODO: 这里要不要加这个是存疑的（组合节点invalid stop会停止所有子节点，所以某个子节点返回invalid是否要将所有的其他节点都停止？）
-        # if new_status != Status.RUNNING:
-        #     self.stop(new_status)
+        # # TODO: 这里要不要加这个是存疑的（组合节点invalid stop会停止所有子节点，所以某个子节点返回invalid是否要将所有的其他节点都停止？）
+        if new_status != Status.RUNNING:
+            self.stop(new_status)
 
         self.status = new_status
         yield self
 
-    def switch_tick(self, index: int, tick_again_status: list[Status]) -> typing.Iterator[py_trees.behaviour.Behaviour]:
+    def switch_tick(self, index: int | typing.Callable[['Composite'], int], tick_again_status: list[Status]) -> \
+            typing.Iterator[py_trees.behaviour.Behaviour]:
         if self.status in tick_again_status:
             # 重新执行上次执行的子节点
             assert self.current_child is not None
         else:
+            if callable(index):
+                index = index(self)
             self.current_child = self.children[index]  # 执行对应的index
 
         yield from self.current_child.tick()
@@ -275,3 +281,29 @@ class Composite(Node, ABC):
         self.status = self.current_child.status
         yield self
 
+    def gen_index(self):
+        """每个组合节点都有对于这个函数的不同定义"""
+        return 0
+
+    @property
+    def reactive(self) -> bool:
+        return self.converter.bool(self.attrs.get('reactive', False))
+
+    @property
+    def memory(self) -> bool:
+        return self.converter.bool(self.attrs.get('memory', False))
+
+    @property
+    def current_index(self):
+        if self.current_child is None:
+            return None
+        else:
+            return self.children.index(self.current_child)
+
+    def to_data(self):
+        return {
+            **super().to_data(),
+            'reactive'     : self.reactive,
+            'memory'       : self.memory,
+            'current_index': self.current_index
+        }

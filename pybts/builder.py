@@ -158,6 +158,7 @@ class Builder:
                 Selector,
                 ReactiveSelector,
                 SelectorWithMemory,
+                CondBranch,
                 ConditionBranch,
                 Template,
                 PreCondition,

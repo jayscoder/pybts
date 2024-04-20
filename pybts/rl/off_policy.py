@@ -96,6 +96,7 @@ def bt_off_policy_collect_rollouts(
         self.actor.reset_noise(env_num_envs)
 
     continue_training = True
+
     while should_collect_more_steps(train_freq, num_collected_steps, num_collected_episodes):
         if self.use_sde and self.sde_sample_freq > 0 and num_collected_steps % self.sde_sample_freq == 0:
             # Sample a new noise matrix
@@ -142,4 +143,6 @@ def bt_off_policy_collect_rollouts(
                 if log_interval is not None and self._episode_num % log_interval == 0:
                     self._dump_logs()
 
-    yield RolloutReturn(num_collected_steps * env_num_envs, num_collected_episodes, continue_training)
+    rollout_return = RolloutReturn(num_collected_steps * env_num_envs, num_collected_episodes, continue_training)
+    print('bt_off_policy_collect_rollouts', rollout_return)
+    yield rollout_return

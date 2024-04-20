@@ -214,30 +214,33 @@ class PYBTJsonEncoder(json.JSONEncoder):
             return list(set)
         elif isinstance(obj, Status):
             return obj.value
-        elif callable(obj):
-            return obj()
-        else:
-            try:
-                import numpy as np
-                if isinstance(obj, np.integer):
-                    return int(obj)
-                elif isinstance(obj, np.floating):
-                    return float(obj)
-                elif isinstance(obj, np.ndarray):
-                    return obj.tolist()
-                elif isinstance(obj, np.bool_):
-                    return bool(obj)
-                elif isinstance(obj, np.str_):
-                    return str(obj)
-                elif isinstance(obj, enum.Enum):
-                    return obj.value
-                elif isinstance(obj, tuple):
-                    return list(obj)  # Convert tuple to list
-                elif isinstance(obj, np.unicode_):
-                    return str(obj)
-            except:
-                pass
-            return str(obj)
+
+        # if callable(obj):
+        #     try:
+        #         return obj()
+        #     except:
+        #         pass
+        try:
+            import numpy as np
+            if isinstance(obj, np.integer):
+                return int(obj)
+            elif isinstance(obj, np.floating):
+                return float(obj)
+            elif isinstance(obj, np.ndarray):
+                return obj.tolist()
+            elif isinstance(obj, np.bool_):
+                return bool(obj)
+            elif isinstance(obj, np.str_):
+                return str(obj)
+            elif isinstance(obj, enum.Enum):
+                return obj.value
+            elif isinstance(obj, tuple):
+                return list(obj)  # Convert tuple to list
+            elif isinstance(obj, np.unicode_):
+                return str(obj)
+        except:
+            pass
+        return str(obj)
 
 
 def json_dumps(json_data, indent=4, sort_keys=False, ensure_ascii=True, **kwargs):

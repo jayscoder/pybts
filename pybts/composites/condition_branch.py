@@ -4,7 +4,7 @@ from py_trees.common import Status
 from pybts.composites.composite import Composite
 
 
-class ConditionBranch(Composite):
+class CondBranch(Composite):
     """
     条件分支节点
     只能有2或3个子节点
@@ -36,34 +36,74 @@ class ConditionBranch(Composite):
         super().setup(**kwargs)
         assert len(self.children) in [2, 3], 'ConditionBranch must have 2 or 3 children'
 
-    def tick(self) -> typing.Iterator[Behaviour]:
+    def cond_tick(self: Composite, tick_again_status: list[Status]):
+        if self.status in tick_again_status and self.current_index != 0:
+            assert self.current_child is not None
+            # 重新执行上次执行的动作节点
+            yield from self.current_child.tick()
+            new_status = self.current_child.status
+            if new_status != Status.RUNNING:
+                self.stop(new_status)
+            self.status = new_status
+            yield self
+            return
+
         condition = self.children[0]
         self.current_child = condition
-
         yield from condition.tick()
 
-        exec_child = None  # 准备执行的节点
+        if condition.status == Status.RUNNING:
+            self.status = Status.RUNNING
+            yield self
+            return
 
         if condition.status == Status.SUCCESS:
             # 执行第1个节点
-            exec_child = self.children[1]
+            self.current_child = self.children[1]
         elif condition.status == Status.FAILURE:
             # 执行第2个节点（如果第二个节点存在的话）
             if len(self.children) == 3:
-                exec_child = self.children[2]
+                self.current_child = self.children[2]
+            else:
+                self.current_child = None
 
-        if condition.status != Status.RUNNING:
-            # 如果条件的状态是RUNNING，则不停止其他节点
-            for child in self.children[1:]:
-                # 停止其他节点
-                if child != exec_child:
-                    child.stop(Status.INVALID)
+        for child in self.children[1:]:
+            # 停止其他节点
+            if child != self.current_child:
+                child.stop(Status.INVALID)
 
         # 执行选择的子节点
-        if exec_child is not None:
-            self.current_child = exec_child
-            yield from exec_child.tick()
-
-        new_status = self.current_child.status
+        if self.current_child is not None:
+            yield from self.current_child.tick()
+            new_status = self.current_child.status
+        else:
+            new_status = condition.status
+        if new_status != Status.RUNNING:
+            self.stop(new_status)
         self.status = new_status
         yield self
+
+    def tick(self) -> typing.Iterator[Behaviour]:
+        if self.reactive:
+            return self.cond_tick(tick_again_status=[])
+        elif self.memory:
+            return self.cond_tick(tick_again_status=[Status.RUNNING, Status.FAILURE])
+        else:
+            return self.cond_tick(tick_again_status=[Status.RUNNING])
+
+
+class ConditionBranch(CondBranch):
+    """条件分支节点的别名"""
+    pass
+
+
+class ReactiveCondBranch(CondBranch):
+
+    def reactive(self) -> bool:
+        return True
+
+
+class CondBranchWithMemory(CondBranch):
+
+    def memory(self) -> bool:
+        return True

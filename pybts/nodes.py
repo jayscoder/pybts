@@ -32,6 +32,8 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     """
 
     def __init__(self, name: str = '', children: typing.List[py_trees.behaviour.Behaviour] = None, **kwargs):
+        self.attrs: typing.Dict[str, typing.AnyStr] = kwargs or { }  # 在builder和xml中传递的参数，会在__init__之后提供一个更完整的
+        self.context: typing.Optional[dict] = None  # 共享的字典，在tree.setup的时候提供
         super().__init__(name=name or self.__class__.__name__)
         self._updater_iter = None
         self.debug_info = {
@@ -41,8 +43,6 @@ class Node(py_trees.behaviour.Behaviour, ABC):
             'terminate_count' : 0,
             'initialise_count': 0
         }
-        self.attrs: typing.Dict[str, typing.AnyStr] = kwargs  # 在builder和xml中传递的参数，会在__init__之后提供一个更完整的
-        self.context: typing.Optional[dict] = None  # 共享的字典，在tree.setup的时候提供
         if children is not None:
             self.children = children
             for child in children:
@@ -73,7 +73,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         # 在board上查看的信息
         return {
             'debug_info': self.debug_info,
-            'attrs'     : self.attrs
+            'attrs'     : self.attrs,
         }
 
     def update(self) -> Status:

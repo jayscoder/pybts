@@ -2,7 +2,7 @@ from .composite import Composite
 from .parallel import Parallel
 from .selector import Selector, SelectorWithMemory, ReactiveSelector
 from .sequence import Sequence, SequenceWithMemory, ReactiveSequence
-from .condition_branch import ConditionBranch
+from .condition_branch import CondBranch, ConditionBranch
 from .template import Template
 from .ppa import PreCondition, PostCondition
 from .switcher import Switcher, ReactiveSwitcher

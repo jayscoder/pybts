@@ -59,7 +59,8 @@ class Converter:
             return int(value)
 
     def eval(self, value: str):
-        return eval(value, self.node.context, { 'math': math, 'random': random })
+        return eval(value, self.node.context,
+                    { 'math': math, 'random': random, 'name': self.node.name })
 
     @classmethod
     def status(cls, value: Union[str, Status]) -> Status:
@@ -71,14 +72,44 @@ class Converter:
         return _STATUS_MAP[value]
 
     @classmethod
-    def status_list(cls, value: Union[str, Status, list[Status]]) -> list[Status]:
+    def status_list(cls, value: Union[str, Status, list[Status]], sep: str = ',') -> list[Status]:
         if isinstance(value, Status):
             return [value]
         elif isinstance(value, list):
             return [cls.status(value=item) for item in value]
         elif isinstance(value, str):
-            value_list = value.split(',')
+            value_list = value.split(sep)
             return [cls.status(value=item) for item in value_list if item != '']
+
+    def int_list(self, value: Union[str, list[int], int], sep: str = ',') -> list[int]:
+        if isinstance(value, int):
+            return [value]
+        elif isinstance(value, list):
+            return [self.int(value=item) for item in value]
+        elif isinstance(value, str):
+            value_list = value.split(sep)
+            return [self.int(value=item) for item in value_list if item != '']
+
+    def float_list(self, value: Union[str, list[float], float], sep: str = ',') -> list[float]:
+        if isinstance(value, float):
+            return [value]
+        elif isinstance(value, list):
+            return [self.float(value=item) for item in value]
+        elif isinstance(value, str):
+            value_list = value.split(sep)
+            return [self.float(value=item) for item in value_list if item != '']
+
+    def str_list(self, value: Union[str, list[str], float], sep: str = ',') -> list[str]:
+        if isinstance(value, str):
+            return [value]
+        elif isinstance(value, list):
+            return [self.render(value=item) for item in value]
+        elif isinstance(value, str):
+            value_list = value.split(sep)
+            return [self.render(value=item) for item in value_list if item != '']
+
+    def str(self, value: str):
+        return self.render(value)
 
     def render(self, value: str) -> str:
         if '{{' not in value or '}}' not in value:
@@ -86,7 +117,9 @@ class Converter:
 
         for i in range(3):
             # 最多嵌套3层
-            rendered_value = jinja2.Template(value).render(self.node.context, math=math, random=random)
+            rendered_value = jinja2.Template(value).render(
+                    self.node.context, math=math, random=random,
+                    name=self.node.name)
             if '{{' not in rendered_value or '}}' not in rendered_value:
                 return rendered_value
             if rendered_value == value:

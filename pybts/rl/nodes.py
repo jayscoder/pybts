@@ -149,7 +149,6 @@ class RLBaseNode(ABC):
     def to_data(self):
         return {
             'rl_iteration'   : self.rl_iteration,
-            'rl_policy'      : str(self.rl_policy()),
             'rl_info'        : self.rl_info,
             'rl_reward'      : self.rl_reward,
             'rl_obs'         : self.rl_obs,
@@ -157,10 +156,6 @@ class RLBaseNode(ABC):
             'rl_action'      : self.rl_action,
             'rl_reward_scope': self.rl_reward_scope(),
         }
-
-    @abstractmethod
-    def rl_env(self) -> gym.Env:
-        raise NotImplemented
 
     @abstractmethod
     def rl_action_space(self) -> gym.spaces.Space:
@@ -194,7 +189,7 @@ class RLBaseNode(ABC):
         if reward_scope != '':
             assert isinstance(self, Node), 'RLOnPolicyNode 必须得继承Node节点'
             assert self.context is not None, 'context必须得设置好'
-            assert 'reward' in self.context, 'context必须得含有rl_reward键'
+            assert 'reward' in self.context, 'context必须得含有rl_reward键，请使用pybts.rl.RLTree'
             scopes = reward_scope.split(',')
             curr_reward = 0
             for scope in scopes:
@@ -206,12 +201,6 @@ class RLBaseNode(ABC):
     def rl_gen_done(self) -> bool:
         # 返回当前环境是否结束
         raise NotImplemented
-
-    def rl_device(self) -> str:
-        return 'cpu'
-
-    def rl_policy(self) -> Union[str, typing.Type[ActorCriticPolicy]]:
-        return 'MlpPolicy'
 
     def rl_take_action(
             self,
@@ -356,27 +345,29 @@ class RLBaseNode(ABC):
     def rl_setup_model(
             self,
             model_class: Union[Type[BaseAlgorithm]],
-            train: bool,
             path: str,
+            policy: Union[str, typing.Type[ActorCriticPolicy]],
+            train: bool = True,
             logger: Logger | None = None,
             tensorboard_log: str | None = None,
             tb_log_name: str | None = None,
             verbose: int = 1,
+            device: str = 'auto',
             **kwargs
     ):
         env = DummyEnv(
-                env=self.rl_env(),
+                obs=self.rl_gen_obs(),
+                info=self.rl_gen_info(),
                 action_space=self.rl_action_space(),
                 observation_space=self.rl_observation_space())
         model: typing.Optional[BaseAlgorithm] = None
 
-
         if train:
             model = model_class(
-                    policy=self.rl_policy(),
+                    policy=policy,
                     env=env,
                     verbose=verbose,
-                    device=self.rl_device(),
+                    device=device,
                     tensorboard_log=tensorboard_log,
                     **kwargs
             )
@@ -385,7 +376,7 @@ class RLBaseNode(ABC):
                 try:
                     model.set_parameters(
                             load_path_or_dict=path,
-                            device=self.rl_device()
+                            device=device
                     )
                 except Exception as e:
                     pass
@@ -396,7 +387,7 @@ class RLBaseNode(ABC):
                     env=env,
                     verbose=verbose,
                     force_reset=False,
-                    device=self.rl_device(),
+                    device=device,
                     **kwargs
             )
         if logger is not None:
@@ -418,6 +409,7 @@ class RLBaseNode(ABC):
                 raise Exception('Unrecognized model type')
 
         self.rl_model = model
+
         return model
 
 

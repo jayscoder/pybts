@@ -240,6 +240,7 @@ class OneShot(Decorator):
             for node in Decorator.tick(self):
                 yield node
 
+
     def terminate(self, new_status: Status) -> None:
         """
         Prevent further entry if finishing with :data:`~py_trees.Status.SUCCESS`.

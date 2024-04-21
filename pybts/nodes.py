@@ -17,6 +17,8 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     Base class for all nodes in the behavior tree
 
     被唤起的生命周期：
+    - setup 只会执行一次
+
     如果被tick到了
 
     状态为RUNNING
@@ -33,7 +35,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 
     def __init__(self, name: str = '', children: typing.List[py_trees.behaviour.Behaviour] = None, **kwargs):
         self.attrs: typing.Dict[str, typing.AnyStr] = kwargs or { }  # 在builder和xml中传递的参数，会在__init__之后提供一个更完整的
-        self.context: typing.Optional[dict] = None  # 共享的字典，在tree.setup的时候提供
+        self.context: typing.Optional[dict] = None  # 共享的字典，在tree.setup的时候提供，所以不要在__init__的时候修改或使用它，而是在setup的时候使用
         super().__init__(name=name or self.__class__.__name__)
         self._updater_iter = None
         self.debug_info = {
@@ -281,8 +283,13 @@ class IsChanged(Node, Condition):
     rule: 判断规则，默认的规则是 curr_value != last_value，可以自定义新的规则，例如 abs(curr_value - last_value) >= 10，需要确保rule返回的值是bool类型
         - rule里面也可以使用模版语法，比如 abs(curr_value - last_value) >= {{min_value}}，模版语法里的min_value需要提前在context里定义好，不然会报错
     用法示例：
-    <IsChanged value="{{agent.x}}" immediate="true">
+
     <IsChanged value="{{agent.y}}" immediate="false" rule="abs(curr_value - last_value) >= 10">
+
+    <Sequence>
+        <IsChanged value="{{agent.hit_enemy_count}}" immediate="false">
+        <Reward reward="1" domain="attack"/>
+    </Sequence>
     """
 
     def __init__(self, value: typing.Any, immediate: bool | str = False, rule: str = '', **kwargs):

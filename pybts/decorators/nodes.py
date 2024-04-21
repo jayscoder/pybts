@@ -178,6 +178,14 @@ class OneShot(Decorator):
       returns :data:`~py_trees.Status.SUCCESS` || :data:`~py_trees.Status.FAILURE`.
 
     .. seealso:: :meth:`py_trees.idioms.oneshot`
+
+    <OneShot>
+        <Sequence>
+            <IsDoorOpen/>
+            <Reward />
+        </Sequence>
+    </OneShot>
+
     """
 
     def __init__(
@@ -233,13 +241,10 @@ class OneShot(Decorator):
         """
         if self.final_status:
             # ignore the child
-            for node in Node.tick(self):
-                yield node
+            yield from Node.tick(self)
         else:
             # tick the child
-            for node in Decorator.tick(self):
-                yield node
-
+            yield from Decorator.tick(self)
 
     def terminate(self, new_status: Status) -> None:
         """
@@ -561,6 +566,9 @@ class Throttle(Decorator):
     """
     节流: 在一定时间间隔内只执行一次
     每隔一段时间才会触发一次子节点，其他时间直接返回之前的状态
+    <Throttle duration="10" time="step">
+        <Reward domain="punish" reward="-0.001"/>
+    </Throttle>
     """
 
     def __init__(self, duration: float | str = 5.0, time: str | float = 'time', **kwargs):
@@ -607,6 +615,15 @@ class IsStatusChanged(Decorator):
     from_status和to_status均可以由多个状态组成，用逗号分隔
 
     immediate: 一开始是否会触发一次IsChanged
+
+
+    <IsStatusChanged from_status="FAILURE" to_status="SUCCESS">
+        <Sequence>
+            <IsDoorOpen/>
+            <Reward />
+        </Sequence>
+    </IsStatusChanged>
+
     """
 
     def __init__(self, from_status: str | Status = '', to_status: str | Status = '', immediate: bool | str = False,

@@ -26,25 +26,12 @@ class Sequence(Composite):
         else:
             return [Status.RUNNING]
 
-    def tick(self: Composite) -> typing.Iterator[behaviour.Behaviour]:
-        if self.reactive:
-            return self.seq_sel_tick(
-                    tick_again_status=[],
-                    continue_status=[Status.SUCCESS],
-                    no_child_status=Status.SUCCESS,
-                    start_index=lambda _: self.gen_index())
-        elif self.memory:
-            return self.seq_sel_tick(
-                    tick_again_status=[Status.RUNNING, Status.FAILURE],
-                    continue_status=[Status.SUCCESS],
-                    no_child_status=Status.SUCCESS,
-                    start_index=lambda _: self.gen_index())
-        else:
-            return self.seq_sel_tick(
-                    tick_again_status=[Status.RUNNING],
-                    continue_status=[Status.SUCCESS],
-                    no_child_status=Status.SUCCESS,
-                    start_index=lambda _: self.gen_index())
+    def tick(self) -> typing.Iterator[behaviour.Behaviour]:
+        return self.seq_sel_tick(
+                tick_again_status=self.tick_again_status(),
+                continue_status=[Status.SUCCESS],
+                no_child_status=Status.SUCCESS,
+                start_index=lambda _: self.gen_index())
 
 
 class SequenceWithMemory(Sequence):

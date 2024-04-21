@@ -17,6 +17,15 @@ class Sequence(Composite):
     def gen_index(self):
         return 0
 
+    def tick_again_status(self: Composite):
+        """计算需要TickAgain的状态"""
+        if self.reactive:
+            return []
+        elif self.memory:
+            return [Status.RUNNING, Status.FAILURE]
+        else:
+            return [Status.RUNNING]
+
     def tick(self: Composite) -> typing.Iterator[behaviour.Behaviour]:
         if self.reactive:
             return self.seq_sel_tick(

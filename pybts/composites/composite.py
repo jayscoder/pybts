@@ -232,6 +232,7 @@ class Composite(Node, ABC):
             assert self.current_child is not None
             index = self.children.index(self.current_child)
         else:
+            # Restart
             self.current_child = None  # 从头执行
             if callable(start_index):
                 start_index = start_index(self)
@@ -241,6 +242,7 @@ class Composite(Node, ABC):
             self.current_child = child
             yield from child.tick()
             if child.status not in continue_status:
+                # 不在Next里，停止执行
                 break
 
         if self.current_child is not None:

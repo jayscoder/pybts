@@ -19,25 +19,21 @@ class Selector(Composite):
         # 想要过滤掉前面的节点的话，可以继承Selector然后重写这个函数
         return 0
 
-    def tick(self) -> typing.Iterator[behaviour.Behaviour]:
+    def tick_again_status(self: Composite):
+        """计算需要TickAgain的状态"""
         if self.reactive:
-            return self.seq_sel_tick(
-                    tick_again_status=[],
-                    continue_status=[Status.FAILURE, Status.INVALID],
-                    no_child_status=Status.FAILURE,
-                    start_index=lambda _: self.gen_index())
+            return []
         elif self.memory:
-            return self.seq_sel_tick(
-                    tick_again_status=[Status.SUCCESS, Status.RUNNING],
-                    continue_status=[Status.FAILURE, Status.INVALID],
-                    no_child_status=Status.FAILURE,
-                    start_index=lambda _: self.gen_index())
+            return [Status.RUNNING, Status.SUCCESS]
         else:
-            return self.seq_sel_tick(
-                    tick_again_status=[Status.RUNNING],
-                    continue_status=[Status.FAILURE, Status.INVALID],
-                    no_child_status=Status.FAILURE,
-                    start_index=lambda _: self.gen_index())
+            return [Status.RUNNING]
+
+    def tick(self) -> typing.Iterator[behaviour.Behaviour]:
+        return self.seq_sel_tick(
+                tick_again_status=self.tick_again_status(),
+                continue_status=[Status.FAILURE, Status.INVALID],
+                no_child_status=Status.FAILURE,
+                start_index=lambda _: self.gen_index())
 
 
 class SelectorWithMemory(Selector):

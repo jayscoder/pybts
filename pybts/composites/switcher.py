@@ -20,7 +20,7 @@ class Switcher(Composite):
     - jinja2模版: 从context中获取
     - random: 随机数
     """
-
+    
     def __init__(self, index: typing.Union[int, str] = 'random', **kwargs):
         super().__init__(**kwargs)
         self.index = index
@@ -31,14 +31,17 @@ class Switcher(Composite):
         else:
             return self.converter.int(self.index)
 
-    def tick(self) -> typing.Iterator[Behaviour]:
+    def tick_again_status(self: Composite):
+        """计算需要重新执行的状态"""
         if self.reactive:
-            return self.switch_tick(index=lambda _: self.gen_index(), tick_again_status=[])
+            return []
         elif self.memory:
-            return self.switch_tick(index=lambda _: self.gen_index(),
-                                    tick_again_status=[Status.RUNNING, Status.FAILURE])
+            return [Status.RUNNING, Status.FAILURE]
         else:
-            return self.switch_tick(index=lambda _: self.gen_index(), tick_again_status=[Status.RUNNING])
+            return [Status.RUNNING]
+
+    def tick(self) -> typing.Iterator[Behaviour]:
+        return self.switch_tick(index=lambda _: self.gen_index(), tick_again_status=self.tick_again_status())
 
 
 class ReactiveSwitcher(Switcher):

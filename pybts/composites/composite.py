@@ -37,13 +37,7 @@ class Composite(Node, ABC):
         Args:
             new_status: behaviour will transition to this new status
         """
-        self.logger.debug(
-                "%s.stop(%s)"
-                % (
-                    self.__class__.__name__,
-                    "%s->%s" % (self.status, new_status)
-                )
-        )
+        super().stop(new_status)
         # Priority interrupt handling
         if new_status == Status.INVALID:
             self.current_child = None
@@ -52,12 +46,6 @@ class Composite(Node, ABC):
                         child.status != Status.INVALID
                 ):  # redundant if INVALID->INVALID
                     child.stop(new_status)
-
-        # Regular Behaviour.stop() handling
-        #   could call directly, but replicating here to avoid repeating the logger
-        self.terminate(new_status)
-        self.status = new_status
-        self.iterator = self.tick()
 
     def tip(self) -> typing.Optional[behaviour.Behaviour]:
         """
@@ -266,6 +254,9 @@ class Composite(Node, ABC):
 
     def switch_tick(self, index: int | typing.Callable[['Composite'], int], tick_again_status: list[Status]) -> \
             typing.Iterator[py_trees.behaviour.Behaviour]:
+        self.debug_info['tick_count'] += 1
+        self.logger.debug("%s.tick()" % (self.__class__.__name__))
+
         if self.status in tick_again_status:
             # 重新执行上次执行的子节点
             assert self.current_child is not None
@@ -280,7 +271,11 @@ class Composite(Node, ABC):
                 # 清除子节点的状态（停止正在执行的子节点）
                 child.stop(Status.INVALID)
 
-        self.status = self.current_child.status
+        new_status = self.current_child.status
+        if new_status != Status.RUNNING:
+            self.stop(new_status)
+
+        self.status = new_status
         yield self
 
     def gen_index(self):

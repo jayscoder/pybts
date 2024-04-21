@@ -58,8 +58,8 @@ class Parallel(Composite):
             # 否则就认为执行失败
             new_status = Status.FAILURE
 
-        # if new_status != Status.RUNNING:
-        #     self.stop(new_status)
+        if new_status != Status.RUNNING:
+            self.stop(new_status)
 
         self.status = new_status
         yield self

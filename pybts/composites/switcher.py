@@ -20,7 +20,7 @@ class Switcher(Composite):
     - jinja2模版: 从context中获取
     - random: 随机数
     """
-    
+
     def __init__(self, index: typing.Union[int, str] = 'random', **kwargs):
         super().__init__(**kwargs)
         self.index = index

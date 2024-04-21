@@ -60,7 +60,16 @@ class Node(py_trees.behaviour.Behaviour, ABC):
 
     def reset(self):
         self.reset_count += 1
-        self.debug_info.clear()
+        self.debug_info = {
+            'tick_count'      : 0,
+            'update_count'    : 0,
+            'terminate_count' : 0,
+            'initialise_count': 0,
+            'success_count'   : 0,
+            'failure_count'   : 0,
+            'invalid_count'   : 0,
+            'running_count'   : 0
+        }
         self._updater_iter = None
         if self.status != Status.INVALID:
             self.stop(Status.INVALID)

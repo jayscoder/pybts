@@ -99,10 +99,8 @@ class Converter:
             value_list = value.split(sep)
             return [self.float(value=item) for item in value_list if item != '']
 
-    def str_list(self, value: Union[str, list[str], float], sep: str = ',') -> list[str]:
-        if isinstance(value, str):
-            return [value]
-        elif isinstance(value, list):
+    def str_list(self, value: Union[str, list[str]], sep: str = ',') -> list[str]:
+        if isinstance(value, list):
             return [self.render(value=item) for item in value]
         elif isinstance(value, str):
             value_list = value.split(sep)

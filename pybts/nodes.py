@@ -41,10 +41,14 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         self.debug_info = {
             'tick_count'      : 0,
             'update_count'    : 0,
-            'reset_count'     : 0,
             'terminate_count' : 0,
-            'initialise_count': 0
+            'initialise_count': 0,
+            'success_count'   : 0,
+            'failure_count'   : 0,
+            'invalid_count'   : 0,
+            'running_count'   : 0
         }
+        self.reset_count = 0
         if children is not None:
             self.children = children
             for child in children:
@@ -55,7 +59,8 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         self.name = self.converter.render(self.name)
 
     def reset(self):
-        self.debug_info['reset_count'] += 1
+        self.reset_count += 1
+        self.debug_info.clear()
         self._updater_iter = None
         if self.status != Status.INVALID:
             self.stop(Status.INVALID)
@@ -74,8 +79,9 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     def to_data(self):
         # 在board上查看的信息
         return {
-            'debug_info': self.debug_info,
-            'attrs'     : self.attrs,
+            'debug_info' : self.debug_info,
+            'attrs'      : self.attrs,
+            'reset_count': self.reset_count
         }
 
     def update(self) -> Status:
@@ -142,6 +148,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         self.terminate(new_status)
         self.status = new_status
         self.iterator = self.tick()
+        self.debug_info[new_status.value.lower() + '_count'] += 1
         if new_status == Status.INVALID:
             self._updater_iter = None  # 停止updater
 

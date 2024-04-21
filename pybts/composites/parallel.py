@@ -70,7 +70,6 @@ class Parallel(Composite):
             'success_threshold': self.success_threshold
         }
 
-
 # class ReactiveParallel(Parallel):
 #     """
 #     反应式并行节点

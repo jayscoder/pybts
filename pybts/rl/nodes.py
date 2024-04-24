@@ -36,9 +36,12 @@ class Reward(Node):
         super().setup(**kwargs)
         self.scope = self.converter.render(self.scope).split(',')  # 域，只会将奖励保存在对应的scope中
 
+    def cal_reward(self):
+        return self.converter.float(self.reward)
+
     def update(self) -> Status:
         assert self.context is not None, 'context is not set'
-        self.curr_reward = self.converter.float(self.reward)
+        self.curr_reward = self.cal_reward()
         if self.context is not None:
             if 'reward' not in self.context:
                 self.context['reward'] = defaultdict(float)

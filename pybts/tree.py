@@ -16,11 +16,11 @@ class Tree(py_trees.trees.BehaviourTree):
             typing.Callable[["Tree"], None]
         ] = []
 
-        self.context = {
-            'round': 0,
-            **(context or { }),
-        }  # 环境字典
-
+        if context is None:
+            self.context = { }
+        else:
+            self.context = context
+        self.context['round'] = 0
         self._has_setup = False
 
     @property

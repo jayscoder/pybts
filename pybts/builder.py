@@ -44,6 +44,8 @@ class Builder:
             module_name = f'{node.__module__}.{node.__name__}'
             self.register(module_name, node)
 
+        return nodes[0]
+
     def get_relative_filename(self, filepath: str):
         """获取文件的相对文件名，相对于目前注册的folder"""
         if os.path.exists(filepath):

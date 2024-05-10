@@ -591,16 +591,13 @@ class Throttle(Decorator):
         super().reset()
         self.last_time = -float('inf')
 
-    def setup(self, **kwargs: typing.Any) -> None:
-        super().setup(**kwargs)
-        self.duration = self.converter.float(self.duration)
-
     def update(self) -> Status:
         return self.decorated.status
 
     def tick(self):
         self.curr_time = self.get_time(self.time)
-        if self.curr_time - self.last_time >= self.duration:
+        duration = self.converter.float(self.duration)
+        if self.curr_time - self.last_time >= duration:
             self.last_time = self.curr_time
             yield from Decorator.tick(self)
         else:

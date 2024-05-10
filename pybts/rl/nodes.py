@@ -21,31 +21,28 @@ class Reward(Node):
     只会对之后的节点生效，所以要放在前面
 
     reward: 给出的对应奖励
-    scope: 奖励存储域
+    domain: 学习域
 
     奖励会累积，所以PPO节点在消费奖励时要记录一下上次拿到的奖励值，然后将两次差值作为最终奖励
     """
 
-    def __init__(self, reward: str | float, scope: str = 'default', **kwargs):
+    def __init__(self, reward: str | float, domain: str = 'default', **kwargs):
         super().__init__(**kwargs)
         self.reward = reward
-        self.scope = scope
+        self.domain = domain
         self.curr_reward = 0
 
     def setup(self, **kwargs: typing.Any) -> None:
         super().setup(**kwargs)
-        self.scope = self.converter.render(self.scope).split(',')  # 域，只会将奖励保存在对应的scope中
-
-    def cal_reward(self):
-        return self.converter.float(self.reward)
+        self.domain = self.converter.render(self.domain).split(',')  # 域，只会将奖励保存在对应的scope中
 
     def update(self) -> Status:
         assert self.context is not None, 'context is not set'
-        self.curr_reward = self.cal_reward()
+        self.curr_reward = self.converter.float(self.reward)
         if self.context is not None:
             if 'reward' not in self.context:
                 self.context['reward'] = defaultdict(float)
-            for sc in self.scope:
+            for sc in self.domain:
                 self.context['reward'][sc] += self.curr_reward
         return Status.SUCCESS
 
@@ -53,10 +50,9 @@ class Reward(Node):
         return {
             # **super().to_data(),
             'curr_reward'   : self.curr_reward,
-            'scope'         : self.scope,
+            'domain'        : self.domain,
             'context_reward': dict(self.context['reward'])
         }
-
 
 class ConditionReward(Decorator):
     """
@@ -176,7 +172,7 @@ class RLBaseNode(ABC):
     def rl_gen_info(self) -> dict:
         raise NotImplemented
 
-    def rl_reward_scope(self) -> str:
+    def rl_reward_domain(self) -> str:
         """
         奖励域
 
@@ -188,12 +184,12 @@ class RLBaseNode(ABC):
 
     @abstractmethod
     def rl_gen_reward(self) -> float:
-        reward_scope = self.rl_reward_scope()
-        if reward_scope != '':
-            assert isinstance(self, Node), 'RLOnPolicyNode 必须得继承Node节点'
+        reward_domain = self.rl_reward_domain()
+        if reward_domain != '':
+            assert isinstance(self, Node) and isinstance(self, RLBaseNode), 'RLOnPolicyNode 必须得继承Node节点'
             assert self.context is not None, 'context必须得设置好'
             assert 'reward' in self.context, 'context必须得含有rl_reward键，请使用pybts.rl.RLTree'
-            scopes = reward_scope.split(',')
+            scopes = reward_domain.split(',')
             curr_reward = 0
             for scope in scopes:
                 curr_reward += self.context['reward'].get(scope, 0)

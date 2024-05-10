@@ -142,7 +142,7 @@ def bt_off_policy_collect_rollouts(
                 # Log training infos
                 if log_interval is not None and self._episode_num % log_interval == 0:
                     self._dump_logs()
-
+    
     rollout_return = RolloutReturn(num_collected_steps * env_num_envs, num_collected_episodes, continue_training)
-    print('bt_off_policy_collect_rollouts', rollout_return)
+    # print('bt_off_policy_collect_rollouts', rollout_return)
     yield rollout_return

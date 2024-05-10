@@ -13,7 +13,7 @@ import time
 from collections import deque
 import sys
 from typing import Union, Dict
-from rl.rlhandler import RLHandler
+from pybts.rl.rlhandler import RLHandler
 
 
 def obs_as_tensor(obs: Union[np.ndarray, Dict[str, np.ndarray]], device: th.device) -> Union[th.Tensor, TensorDict]:

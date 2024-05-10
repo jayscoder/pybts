@@ -169,7 +169,7 @@ class RLBaseNode(ABC):
             'rl_obs'         : self.rl_obs,
             'rl_accum_reward': self.rl_accum_reward,
             'rl_action'      : self.rl_action,
-            'rl_reward_scope': self.rl_domain(),
+            'rl_domain': self.rl_domain(),
         }
 
     @abstractmethod

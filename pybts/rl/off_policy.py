@@ -16,7 +16,7 @@ from stable_baselines3.common.type_aliases import (
 )
 from stable_baselines3.common.utils import should_collect_more_steps
 from gymnasium import spaces
-from rl.rlhandler import RLHandler
+from pybts.rl.rlhandler import RLHandler
 
 
 def bt_off_policy_setup_learn(

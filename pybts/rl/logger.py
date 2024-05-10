@@ -10,8 +10,28 @@ class TensorboardLogger(Logger):
         format_strings = ["stdout", "tensorboard"] if verbose == 1 else ['tensorboard']
         output_formats = [make_output_format(f, folder, log_suffix) for f in format_strings]
         super().__init__(folder, output_formats=output_formats)
-        self.old_name_to_value = { }
+        self.old_name_to_values = []
         self.name_to_count = defaultdict(float)
+
+    def record_and_mean_n_episodes(self, key: str, value: Any, n: int):
+        self.record(key=key, value=value)
+        self.record_mean_last_n_episodes(key=key, n=n)
+
+    def record_mean_last_n_episodes(self, key: str, n: int, to_key: str = '') -> None:
+        """计算过去N轮的平均"""
+        if to_key == '':
+            to_key = key + f'_{n}_avg'
+
+        if len(self.old_name_to_values) >= n:
+            values = self.old_name_to_values[-n:]
+        else:
+            values = self.old_name_to_values
+        v = 0
+        for i in range(len(values)):
+            v += values[i].get(key, 0)
+
+        if len(values) > 0:
+            self.record(to_key, v / len(values))
 
     def record_mean_weighted(self, key: str, value: Any, weight: float = 1) -> None:
         """
@@ -52,7 +72,10 @@ class TensorboardLogger(Logger):
         """
         if value is None:
             return
-        old_value = self.old_name_to_value.get(key, 0)
+        if len(self.old_name_to_values) > 0:
+            old_value = self.old_name_to_values[-1].get(key, 0)
+        else:
+            old_value = 0
         self.record(key, value - old_value)
 
     def record_sum_old(self, key: str, value: Any) -> None:
@@ -66,9 +89,16 @@ class TensorboardLogger(Logger):
         """
         if value is None:
             return
-        old_value = self.old_name_to_value.get(key, 0)
+        if len(self.old_name_to_values) > 0:
+            old_value = self.old_name_to_values[-1].get(key, 0)
+        else:
+            old_value = 0
         self.record(key, value + old_value)
 
     def dump(self, step: int = 0) -> None:
-        self.old_name_to_value = self.name_to_value.copy()
+        self.old_name_to_values.append(self.name_to_value.copy())
+        if len(self.old_name_to_values) > 1000:
+            # 最多保存最近1000轮数据
+            self.old_name_to_values = self.old_name_to_values[-1000:]
         super().dump(step=step)
+

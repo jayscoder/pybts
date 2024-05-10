@@ -11,7 +11,7 @@ from typing import Union, Type
 import gymnasium as gym
 from pybts.rl.common import DummyEnv
 from stable_baselines3.common.logger import Logger
-
+from pybts.rl.rlhandler import *
 
 class Reward(Node):
     """
@@ -132,28 +132,44 @@ class RLBaseNode(ABC):
     """强化学习基础节点，拿来跟其他的Node多继承用"""
 
     def __init__(self):
-        self.rl_collector = None
         self.rl_accum_reward = 0  # 当前累积奖励
         self.rl_info = None
         self.rl_reward = 0  # 当前奖励
         self.rl_obs = None
-        self.rl_iteration = 0
+        self.rl_obs_index = 0  # 上一次观测的经验索引
         self.rl_done = False
         self.rl_action = None
         self.rl_model: Optional[BaseAlgorithm] = None
+        self.rl_values = None
+        self.rl_log_probs = None
+        self.rl_log_interval = 0
+        self.rl_handler: RLHandler | None = None
 
     def reset(self):
-        self.rl_accum_reward = 0
+        self.rl_accum_reward = 0  # 当前累积奖励
+        self.rl_info = None
+        self.rl_reward = 0  # 当前奖励
+        self.rl_obs = None
+        self.rl_obs_index = 0  # 上一次观测的经验索引
+        self.rl_done = False
+        self.rl_action = None
+        self.rl_values = None
+        self.rl_log_probs = None
+        self.rl_log_interval = 0
+        try:
+            if self.rl_handler is not None:
+                self.rl_handler.reset()
+        except:
+            pass
 
     def to_data(self):
         return {
-            'rl_iteration'   : self.rl_iteration,
             'rl_info'        : self.rl_info,
             'rl_reward'      : self.rl_reward,
             'rl_obs'         : self.rl_obs,
             'rl_accum_reward': self.rl_accum_reward,
             'rl_action'      : self.rl_action,
-            'rl_reward_scope': self.rl_reward_scope(),
+            'rl_reward_scope': self.rl_domain(),
         }
 
     @abstractmethod
@@ -172,7 +188,7 @@ class RLBaseNode(ABC):
     def rl_gen_info(self) -> dict:
         raise NotImplemented
 
-    def rl_reward_domain(self) -> str:
+    def rl_domain(self) -> str:
         """
         奖励域
 
@@ -184,11 +200,11 @@ class RLBaseNode(ABC):
 
     @abstractmethod
     def rl_gen_reward(self) -> float:
-        reward_domain = self.rl_reward_domain()
+        reward_domain = self.rl_domain()
         if reward_domain != '':
             assert isinstance(self, Node) and isinstance(self, RLBaseNode), 'RLOnPolicyNode 必须得继承Node节点'
             assert self.context is not None, 'context必须得设置好'
-            assert 'reward' in self.context, 'context必须得含有rl_reward键，请使用pybts.rl.RLTree'
+            assert 'reward' in self.context, 'context必须得含有rl_reward键，请使用rl.RLTree'
             scopes = reward_domain.split(',')
             curr_reward = 0
             for scope in scopes:
@@ -201,146 +217,6 @@ class RLBaseNode(ABC):
         # 返回当前环境是否结束
         raise NotImplemented
 
-    def rl_take_action(
-            self,
-            train: bool,
-            log_interval: int = 1,
-            deterministic: bool = False,
-    ):
-        if isinstance(self.rl_model, OnPolicyAlgorithm):
-            return self._rl_on_policy_take_action(
-                    train=train,
-                    log_interval=log_interval,
-                    deterministic=deterministic
-            )
-        else:
-            return self._rl_off_policy_take_action(
-                    train=train,
-                    log_interval=log_interval,
-                    deterministic=deterministic
-            )
-
-    def _rl_off_policy_take_action(
-            self,
-            train: bool,
-            log_interval: int = 1,
-            deterministic: bool = False,
-    ):
-        assert self.rl_model is not None, 'RL model not initialized'
-        assert isinstance(self.rl_model, OffPolicyAlgorithm), 'RL model must be initialized with OffPolicyAlgorithm'
-        model: OffPolicyAlgorithm = self.rl_model
-        info = self.rl_gen_info()
-        reward = self.rl_gen_reward()
-        obs = self.rl_gen_obs()
-        done = self.rl_gen_done()
-
-        if train:
-            try:
-                if self.rl_collector is None:
-                    self.rl_collector = bt_off_policy_collect_rollouts(
-                            model,
-                            train_freq=model.train_freq,
-                            action_noise=model.action_noise,
-                            learning_starts=model.learning_starts,
-                            replay_buffer=model.replay_buffer,
-                            log_interval=log_interval,
-                    )
-                    action = self.rl_collector.send(None)
-                else:
-                    info = info
-                    action = self.rl_collector.send((obs, reward, done, info))
-
-                if isinstance(action, RolloutReturn):
-                    # 结束了
-                    rollout: RolloutReturn = action
-                    if model.num_timesteps > 0 and model.num_timesteps > model.learning_starts:
-                        # If no `gradient_steps` is specified,
-                        # do as many gradients steps as steps performed during the rollout
-                        gradient_steps = model.gradient_steps if model.gradient_steps >= 0 else rollout.episode_timesteps
-                        # Special case when the user passes `gradient_steps=0`
-                        if gradient_steps > 0:
-                            model.train(batch_size=model.batch_size, gradient_steps=gradient_steps)
-
-                    self.rl_collector = bt_off_policy_collect_rollouts(
-                            model,
-                            train_freq=model.train_freq,
-                            action_noise=model.action_noise,
-                            learning_starts=model.learning_starts,
-                            replay_buffer=model.replay_buffer,
-                            log_interval=log_interval,
-                    )
-                    action = self.rl_collector.send(None)
-            except StopIteration:
-                self.rl_collector = None
-                self.rl_iteration += 1
-                # Display training infos
-
-                self.rl_collector = bt_off_policy_collect_rollouts(
-                        model,
-                        train_freq=model.train_freq,
-                        action_noise=model.action_noise,
-                        learning_starts=model.learning_starts,
-                        replay_buffer=model.replay_buffer,
-                        log_interval=log_interval,
-                )
-                action = self.rl_collector.send(None)
-        else:
-            # 预测模式
-            action, state = model.predict(obs, deterministic=deterministic)
-
-        self.rl_obs = obs
-        self.rl_reward = reward
-        self.rl_info = info
-        self.rl_accum_reward += reward
-        self.rl_action = action
-        self.rl_done = done
-        return action
-
-    def _rl_on_policy_take_action(
-            self,
-            train: bool,
-            log_interval: int = 1,
-            deterministic: bool = False,
-    ):
-        assert self.rl_model is not None, 'RL model not initialized'
-        assert isinstance(self.rl_model, OnPolicyAlgorithm), 'RL model must be an instance of OnPolicyAlgorithm'
-        model: OnPolicyAlgorithm = self.rl_model
-        info = self.rl_gen_info()
-        reward = self.rl_gen_reward()
-        obs = self.rl_gen_obs()
-        done = self.rl_gen_done()
-        if train:
-            try:
-                if self.rl_collector is None:
-                    self.rl_collector = bt_on_policy_collect_rollouts(
-                            model,
-                            last_obs=obs)
-                    action = self.rl_collector.send(None)
-                else:
-                    info = info
-                    action = self.rl_collector.send((obs, reward, done, info))
-            except StopIteration:
-                self.rl_collector = None
-                self.rl_iteration += 1
-                # Display training infos
-                bt_on_policy_train(model, iteration=self.rl_iteration, log_interval=log_interval)
-
-                self.rl_collector = bt_on_policy_collect_rollouts(
-                        model,
-                        last_obs=obs)
-                action = self.rl_collector.send(None)
-        else:
-            # 预测模式
-            action, state = model.predict(obs, deterministic=deterministic)
-
-        self.rl_obs = obs
-        self.rl_reward = reward
-        self.rl_info = info
-        self.rl_accum_reward += reward
-        self.rl_action = action
-        self.rl_done = done
-        return action
-
     def rl_setup_model(
             self,
             model_class: Union[Type[BaseAlgorithm]],
@@ -352,6 +228,7 @@ class RLBaseNode(ABC):
             tb_log_name: str | None = None,
             verbose: int = 1,
             device: str = 'auto',
+            log_interval: int = 1,
             **kwargs
     ):
         env = DummyEnv(
@@ -408,8 +285,196 @@ class RLBaseNode(ABC):
                 raise Exception('Unrecognized model type')
 
         self.rl_model = model
-
+        self.rl_log_interval = log_interval
+        if isinstance(model, OffPolicyAlgorithm):
+            self.rl_handler = OffPolicyRLHandler(model=model, log_interval=log_interval)
+        else:
+            self.rl_handler = OnPolicyRLHandler(model=model, log_interval=log_interval)
         return model
+
+    def rl_observe(self, train: bool, action, obs, reward, done, info, obs_index: int):
+        """
+        观测
+        :param train:
+        :param action:
+        :param obs:
+        :param reward:
+        :param done:
+        :param info:
+        :param obs_index: 观测的索引
+        :return:
+        """
+        # if obs_index == self.rl_obs_index:
+        #     print(f'观测了相同的经验 {self.rl_obs_index}')
+
+        self.rl_values = None  # 上一帧可能也是经验填充的，所以这里干脆就清除调，反正之后会自动在observer里再算一个出来
+        self.rl_log_probs = None
+        if train:
+            if self.rl_handler is not None:
+                should_train = self.rl_handler.observe(
+                        actions=action,
+                        infos=info,
+                        rewards=reward,
+                        new_obs=obs,
+                        dones=done,
+                        values=None, log_probs=None)
+                if should_train:
+                    self.rl_handler.train()
+        self.rl_obs_index = obs_index
+
+    def rl_take_action(
+            self,
+            train: bool,
+            deterministic: bool = False,
+    ):
+        info = self.rl_gen_info()
+        reward = self.rl_gen_reward()
+        obs = self.rl_gen_obs()
+        done = self.rl_gen_done()
+        if train:
+            self.rl_action, self.rl_values, self.rl_log_probs = self.rl_handler.predict()
+        else:
+            self.rl_action, _ = self.rl_model.predict(obs, deterministic=deterministic)
+
+        self.rl_obs = obs
+        self.rl_reward = reward
+        self.rl_info = info
+        self.rl_accum_reward += reward
+        self.rl_done = done
+        return self.rl_action
+
+        # if isinstance(self.rl_model, OnPolicyAlgorithm):
+        #     return self._rl_on_policy_take_action(
+        #             train=train,
+        #             log_interval=self.rl_log_interval,
+        #             deterministic=deterministic
+        #     )
+        # else:
+        #     return self._rl_off_policy_take_action(
+        #             train=train,
+        #             log_interval=self.rl_log_interval,
+        #             deterministic=deterministic
+        #     )
+
+    # def _rl_off_policy_take_action(
+    #         self,
+    #         train: bool,
+    #         log_interval: int = 1,
+    #         deterministic: bool = False,
+    # ):
+    #     assert self.rl_model is not None, 'RL model not initialized'
+    #     assert isinstance(self.rl_model, OffPolicyAlgorithm), 'RL model must be initialized with OffPolicyAlgorithm'
+    #     model: OffPolicyAlgorithm = self.rl_model
+    #     info = self.rl_gen_info()
+    #     reward = self.rl_gen_reward()
+    #     obs = self.rl_gen_obs()
+    #     done = self.rl_gen_done()
+    #     if train:
+    #         try:
+    #             if self.rl_collector is None:
+    #                 self.rl_collector = bt_off_policy_collect_rollouts(
+    #                         model,
+    #                         train_freq=model.train_freq,
+    #                         action_noise=model.action_noise,
+    #                         learning_starts=model.learning_starts,
+    #                         replay_buffer=model.replay_buffer,
+    #                         log_interval=log_interval,
+    #                 )
+    #                 action = self.rl_collector.send(None)
+    #             else:
+    #                 info = info
+    #                 action = self.rl_collector.send((obs, reward, done, info))
+    #
+    #             if isinstance(action, RolloutReturn):
+    #                 # 结束了
+    #                 rollout: RolloutReturn = action
+    #                 if model.num_timesteps > 0 and model.num_timesteps > model.learning_starts:
+    #                     # If no `gradient_steps` is specified,
+    #                     # do as many gradients steps as steps performed during the rollout
+    #                     gradient_steps = model.gradient_steps if model.gradient_steps >= 0 else rollout.episode_timesteps
+    #                     # Special case when the user passes `gradient_steps=0`
+    #                     if gradient_steps > 0:
+    #                         model.train(batch_size=model.batch_size, gradient_steps=gradient_steps)
+    #
+    #                 self.rl_collector = bt_off_policy_collect_rollouts(
+    #                         model,
+    #                         train_freq=model.train_freq,
+    #                         action_noise=model.action_noise,
+    #                         learning_starts=model.learning_starts,
+    #                         replay_buffer=model.replay_buffer,
+    #                         log_interval=log_interval,
+    #                 )
+    #                 action = self.rl_collector.send(None)
+    #         except StopIteration:
+    #             self.rl_collector = None
+    #             self.rl_iteration += 1
+    #             # Display training infos
+    #
+    #             self.rl_collector = bt_off_policy_collect_rollouts(
+    #                     model,
+    #                     train_freq=model.train_freq,
+    #                     action_noise=model.action_noise,
+    #                     learning_starts=model.learning_starts,
+    #                     replay_buffer=model.replay_buffer,
+    #                     log_interval=log_interval,
+    #             )
+    #             action = self.rl_collector.send(None)
+    #     else:
+    #         # 预测模式
+    #         action, state = model.predict(obs, deterministic=deterministic)
+    #
+    #     self.rl_obs = obs
+    #     self.rl_reward = reward
+    #     self.rl_info = info
+    #     self.rl_accum_reward += reward
+    #     self.rl_action = action
+    #     self.rl_done = done
+    #     return action
+    #
+    # def _rl_on_policy_take_action(
+    #         self,
+    #         train: bool,
+    #         log_interval: int = 1,
+    #         deterministic: bool = False,
+    # ):
+    #     assert self.rl_model is not None, 'RL model not initialized'
+    #     assert isinstance(self.rl_model, OnPolicyAlgorithm), 'RL model must be an instance of OnPolicyAlgorithm'
+    #     model: OnPolicyAlgorithm = self.rl_model
+    #     info = self.rl_gen_info()
+    #     reward = self.rl_gen_reward()
+    #     obs = self.rl_gen_obs()
+    #     done = self.rl_gen_done()
+    #     if train:
+    #         try:
+    #             if self.rl_collector is None:
+    #                 self.rl_collector = bt_on_policy_collect_rollouts(
+    #                         model,
+    #                         last_obs=obs)
+    #                 action = self.rl_collector.send(None)
+    #             else:
+    #                 info = info
+    #                 action = self.rl_collector.send((obs, reward, done, info))
+    #         except StopIteration:
+    #             self.rl_collector = None
+    #             self.rl_iteration += 1
+    #             # Display training infos
+    #             bt_on_policy_train(model, iteration=self.rl_iteration, log_interval=log_interval)
+    #
+    #             self.rl_collector = bt_on_policy_collect_rollouts(
+    #                     model,
+    #                     last_obs=obs)
+    #             action = self.rl_collector.send(None)
+    #     else:
+    #         # 预测模式
+    #         action, state = model.predict(obs, deterministic=deterministic)
+    #
+    #     self.rl_obs = obs
+    #     self.rl_reward = reward
+    #     self.rl_info = info
+    #     self.rl_accum_reward += reward
+    #     self.rl_action = action
+    #     self.rl_done = done
+    #     return action
 
 
 if __name__ == '__main__':

@@ -2,10 +2,8 @@ from __future__ import annotations
 
 import typing
 
-from py_trees.trees import BehaviourTree
-
+import pybts
 from pybts.tree import Tree
-import py_trees
 from pybts.nodes import Node
 from collections import defaultdict
 

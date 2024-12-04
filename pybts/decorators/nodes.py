@@ -565,8 +565,8 @@ class SuccessIsRunning(Decorator):
 class Throttle(Decorator):
     """
     节流: 在一定时间间隔内只执行一次
-    每隔一段时间才会触发一次子节点，其他时间直接返回之前的状态
-    <Throttle duration="10" time="step">
+    每隔一段时间才会触发一次子节点，其他时间直接返回之前的状态（或者指定的状态）
+    <Throttle duration="10" time="{{step}}">
         <Reward domain="punish" reward="-0.001"/>
     </Throttle>
     """
@@ -594,14 +594,59 @@ class Throttle(Decorator):
     def update(self) -> Status:
         return self.decorated.status
 
-    def tick(self):
-        self.curr_time = self.get_time(self.time)
+    def should_tick_child(self):
         duration = self.converter.float(self.duration)
         if self.curr_time - self.last_time >= duration:
-            self.last_time = self.curr_time
+            return True
+        return False
+
+    def tick(self):
+        self.curr_time = self.get_time(self.time)
+        if self.should_tick_child():
             yield from Decorator.tick(self)
+            self.last_time = self.curr_time
         else:
             yield from Node.tick(self)
+
+
+class ThrottleSuccessIsRunning(Decorator):
+    """
+    节流运行节点，在节流时间间隔内会持续的激活子节点
+    在间隔时间内：
+        当子节点返回success时，会返回running
+        当子节点返回failure/invalid时，停止节流时间间隔，并且返回failure/invalid
+        当子节点返回running时，会返回running
+    在间隔时间结束时：直接返回子节点的状态
+    """
+
+    def __init__(self,
+                 duration: float | str = 5.0,
+                 time: str | float = 'time',
+                 **kwargs):
+        """
+        Init with the decorated child and a timeout duration.
+
+        Args:
+            child: the child behaviour or subtree
+            name: the decorator name
+            duration: timeout length in seconds
+            time: 当前时间，传time表示使用系统时间
+        """
+        super().__init__(**kwargs)
+        self.duration = duration
+        self.time = time
+
+    def updater(self) -> typing.Iterator[Status]:
+        duration = self.converter.float(self.duration)
+        start_time = self.get_time(self.time)
+        while self.get_time(self.time) - start_time < duration:
+            if self.decorated.status in [Status.FAILURE, Status.INVALID]:
+                break
+            if self.decorated.status == Status.SUCCESS:
+                yield Status.RUNNING
+            else:
+                yield self.decorated.status
+        yield self.decorated.status
 
 
 class IsStatusChanged(Decorator):

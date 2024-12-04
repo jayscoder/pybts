@@ -35,6 +35,20 @@ class Selector(Composite):
                 no_child_status=Status.FAILURE,
                 start_index=lambda _: self.gen_index())
 
+    def peek_tick(self):
+        """
+        预计tick，仅考虑条件节点，不考虑动作节点（将动作节点过滤掉），且不改变自己的状态，直接将最终结果返回
+        """
+        from pybts import Action, Node
+        for child in self.children:
+            if isinstance(child, Action):
+                continue
+            if isinstance(child, Node):
+                status = child.peek_tick()
+                if status != Status.FAILURE:
+                    return status
+        return Status.FAILURE
+
 
 class SelectorWithMemory(Selector):
     """

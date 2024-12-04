@@ -10,6 +10,8 @@ import typing
 import py_trees
 import itertools
 import random
+from py_trees import logging, blackboard
+import uuid
 
 
 class Node(py_trees.behaviour.Behaviour, ABC):
@@ -36,7 +38,28 @@ class Node(py_trees.behaviour.Behaviour, ABC):
     def __init__(self, name: str = '', children: typing.List[py_trees.behaviour.Behaviour] = None, **kwargs):
         self.attrs: typing.Dict[str, typing.AnyStr] = kwargs or { }  # 在builder和xml中传递的参数，会在__init__之后提供一个更完整的
         self.context: typing.Optional[dict] = None  # 共享的字典，在tree.setup的时候提供，所以不要在__init__的时候修改或使用它，而是在setup的时候使用
-        super().__init__(name=name or self.__class__.__name__)
+        if not isinstance(name, str):
+            raise TypeError(
+                    "a behaviour name should be a string, but you passed in {}".format(
+                            type(name)
+                    )
+            )
+        self.id = (
+            uuid.uuid4()
+        )  # used to uniquely identify this node (helps with removing children from a tree)
+        self.name: str = name or self.__class__.__name__
+        self.blackboards: typing.List[blackboard.Client] = []
+        self.qualified_name = "{}/{}".format(
+                self.__class__.__qualname__, self.name
+        )  # convenience
+        self.status = common.Status.INVALID
+        self.parent: typing.Optional[
+            Behaviour
+        ] = None  # will get set if a behaviour is added to a composite
+        self.children: typing.List[Behaviour] = []  # only set by composite behaviours
+        self.logger = logging.Logger(name)
+        self.feedback_message = ""  # useful for debugging, or human readable updates, but not necessary to implement
+        self.blackbox_level = common.BlackBoxLevel.NOT_A_BLACKBOX
         self._updater_iter = None
         self.debug_info = {
             'tick_count'      : 0,
@@ -128,9 +151,13 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         assert isinstance(new_status, Status), f'{self.name}: {new_status} is not a valid status'
         if new_status != Status.RUNNING:
             self.stop(new_status)
-
         self.status = new_status
         yield self
+
+    def peek_tick(self) -> Status:
+        if isinstance(self, Condition) and isinstance(self, Node):
+            return self.update()
+        raise NotImplemented
 
     def stop(self, new_status: Status) -> None:
         """
@@ -156,7 +183,7 @@ class Node(py_trees.behaviour.Behaviour, ABC):
         )
         self.terminate(new_status)
         self.status = new_status
-        self.iterator = self.tick()
+        # self.iterator = self.tick()
         self.debug_info[new_status.value.lower() + '_count'] += 1
         if new_status == Status.INVALID:
             self._updater_iter = None  # 停止updater
@@ -216,6 +243,11 @@ class Action(Node, ABC):
             **super().to_data(),
             'actions': [str(act) for act in actions]
         }
+
+    def peek_tick(self) -> Status:
+        if isinstance(self, Condition) and isinstance(self, Node):
+            return self.update()
+        raise Exception('动作节点不能被peek tick')
 
 
 class Condition:
@@ -295,7 +327,7 @@ class IsChanged(Node, Condition):
 
     参数：
     value: 监听的值
-    immediate: 是否一开始就认为发生了变化
+    immediate: 是否在第一次被激活的时候就认为发生了变化
     rule: 判断规则，默认的规则是 curr_value != last_value，可以自定义新的规则，例如 abs(curr_value - last_value) >= 10，需要确保rule返回的值是bool类型
         - rule里面也可以使用模版语法，比如 abs(curr_value - last_value) >= {{min_value}}，模版语法里的min_value需要提前在context里定义好，不然会报错
     用法示例：

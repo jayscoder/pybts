@@ -1,3 +1,4 @@
+from __future__ import annotations
 import numpy as np
 import torch
 from gymnasium import spaces
@@ -82,13 +83,15 @@ def bt_on_policy_setup_learn(
     return total_timesteps
 
 
-def bt_on_policy_collect_rollouts(self: OnPolicyAlgorithm, last_obs) -> typing.Generator:
+def bt_on_policy_collect_rollouts(
+        self: OnPolicyAlgorithm, last_obs,
+        last_action_mask: np.ndarray | None = None) -> typing.Generator:
     """
     Collect rollouts from an OnPolicyAlgorithm
     :param self:
     :param last_obs: last observation
 
-    collector = bt_on_policy_collect_rollouts(model, last_obs)
+    collector = bt_on_policy_collect_rollouts(model, last_obs, last_action_mask)
     action = next(collector)
     obs, reward, terminated, truncated, info = env.step(action)
     collector.send(obs, reward, terminated or truncated, info)
@@ -102,7 +105,9 @@ def bt_on_policy_collect_rollouts(self: OnPolicyAlgorithm, last_obs) -> typing.G
         self.policy.reset_noise(1)
 
     self._last_obs = np.expand_dims(last_obs, axis=0)
-
+    if last_action_mask is not None:
+        last_action_mask = np.expand_dims(last_action_mask, axis=0)
+    self._last_action_mask = last_action_mask
     # callback.on_rollout_start()
     while n_steps < self.n_steps:
         if self.use_sde and self.sde_sample_freq > 0 and n_steps % self.sde_sample_freq == 0:
@@ -112,7 +117,11 @@ def bt_on_policy_collect_rollouts(self: OnPolicyAlgorithm, last_obs) -> typing.G
         with th.no_grad():
             # Convert to pytorch tensor or to TensorDict
             obs_tensor = obs_as_tensor(self._last_obs, self.device)
-            actions, values, log_probs = self.policy(obs_tensor)
+            if self._last_action_mask is not None:
+                actions, values, log_probs = self.policy(obs_tensor, action_mask=self._last_action_mask)
+            else:
+                actions, values, log_probs = self.policy(obs_tensor)
+
         actions = actions.cpu().numpy()
 
         # Rescale and perform action
@@ -128,14 +137,16 @@ def bt_on_policy_collect_rollouts(self: OnPolicyAlgorithm, last_obs) -> typing.G
                 # as we are sampling from an unbounded Gaussian distribution
                 clipped_actions = np.clip(actions, self.action_space.low, self.action_space.high)
 
-        new_obs, rewards, dones, infos = yield clipped_actions[0]
+        new_obs, rewards, dones, infos, action_mask = yield clipped_actions[0]
 
         # 数据都从单个处理成批量的
         new_obs = np.expand_dims(new_obs, axis=0)
         rewards = np.array([rewards])
         dones = np.array([dones])
-        infos = [infos]
 
+        infos = [infos]
+        if action_mask is not None:
+            action_mask = np.expand_dims(action_mask, axis=0)
         self.num_timesteps += 1
 
         # Give access to local variables
@@ -165,19 +176,29 @@ def bt_on_policy_collect_rollouts(self: OnPolicyAlgorithm, last_obs) -> typing.G
                     terminal_value = self.policy.predict_values(terminal_obs)[0]  # type: ignore[arg-type]
                 rewards[idx] += self.gamma * terminal_value
 
-        self.rollout_buffer.add(
-                self._last_obs,  # type: ignore[arg-type]
-                actions,
-                rewards,
-                self._last_episode_starts,  # type: ignore[arg-type]
-                values,
-                log_probs,
-        )
-        # print(
-        #         f'collector_{self.n_steps}: {n_steps} actions={actions.tolist()} rewards={rewards.tolist()} dones={dones.tolist()} values={values.tolist()}')
+        if self._last_action_mask is not None:
+            self.rollout_buffer.add(
+                    self._last_obs,  # type: ignore[arg-type]
+                    actions,
+                    rewards,
+                    self._last_episode_starts,  # type: ignore[arg-type]
+                    values,
+                    log_probs,
+                    self._last_action_mask
+            )
+        else:
+            self.rollout_buffer.add(
+                    self._last_obs,  # type: ignore[arg-type]
+                    actions,
+                    rewards,
+                    self._last_episode_starts,  # type: ignore[arg-type]
+                    values,
+                    log_probs,
+            )
 
         self._last_obs = new_obs  # type: ignore[assignment]
         self._last_episode_starts = dones
+        self._last_action_mask = action_mask
 
     with th.no_grad():
         # Compute value for the last timestep

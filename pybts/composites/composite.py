@@ -278,6 +278,8 @@ class Composite(Node, ABC):
         self.status = new_status
         yield self
 
+
+
     def gen_index(self):
         """每个组合节点都有对于这个函数的不同定义"""
         return 0

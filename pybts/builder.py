@@ -22,6 +22,7 @@ class Builder:
             self.folders = [folders]
         else:
             self.folders = folders
+        self.context = { }  # 构建时使用的context，和节点内的context无关
 
     def register(self, name: str | list[str], creator: Callable, desc: str = ''):
         if isinstance(name, str):
@@ -115,6 +116,8 @@ class Builder:
         # 实现include逻辑，可以在这里引用别的节点
         if tag.lower() == 'include':
             filepath = data['path']
+            from pybts.converter import Converter
+            filepath = Converter.Render(value=filepath, context=self.context)
             del data['path']
             # include节点设置的参数可以传递给构建的每个节点
             return self.build_from_file(filepath=filepath, attrs=data)
@@ -200,7 +203,8 @@ class Builder:
                 SuccessIsRunning,
                 Timeout,
                 Throttle,
-                IsStatusChanged
+                IsStatusChanged,
+                ThrottleSuccessIsRunning
         )
 
         # 且或非

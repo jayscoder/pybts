@@ -109,6 +109,22 @@ class Converter:
     def str(self, value: str):
         return self.render(value)
 
+    @classmethod
+    def Render(cls, value: str, context: dict) -> str:
+        if '{{' not in value or '}}' not in value:
+            return value
+
+        for i in range(3):
+            # 最多嵌套3层
+            rendered_value = jinja2.Template(value).render(
+                    context, math=math, random=random)
+            if '{{' not in rendered_value or '}}' not in rendered_value:
+                return rendered_value
+            if rendered_value == value:
+                return rendered_value
+            value = rendered_value
+        return value
+
     def render(self, value: str) -> str:
         if '{{' not in value or '}}' not in value:
             return value

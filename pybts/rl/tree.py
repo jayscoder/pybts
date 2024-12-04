@@ -18,12 +18,14 @@ class RLTree(Tree):
     def __init__(self, root: Node, name: str = '', context: dict = None):
         super().__init__(root=root, name=name, context=context)
         self.context['reward'] = defaultdict(int)  # 本轮的奖励，默认scope是default
+        self.context['reward']['default'] = 0
 
     def reset(self):
         super().reset()
         # 先reset所有节点再清空奖励
         # 清空奖励
         self.context['reward'] = defaultdict(int)
+        self.context['reward']['default'] = 0
 
     def tick(
             self: RLTree,

@@ -54,6 +54,7 @@ class Reward(Node):
             'context_reward': dict(self.context['reward'])
         }
 
+
 class ConditionReward(Decorator):
     """
     强化学习奖励装饰节点
@@ -153,7 +154,7 @@ class RLBaseNode(ABC):
             'rl_obs'         : self.rl_obs,
             'rl_accum_reward': self.rl_accum_reward,
             'rl_action'      : self.rl_action,
-            'rl_reward_scope': self.rl_reward_scope(),
+            'rl_domain'      : self.rl_domain(),
         }
 
     @abstractmethod
@@ -168,11 +169,14 @@ class RLBaseNode(ABC):
     def rl_gen_obs(self):
         raise NotImplemented
 
+    def rl_gen_action_mask(self):
+        return None
+
     @abstractmethod
     def rl_gen_info(self) -> dict:
         raise NotImplemented
 
-    def rl_reward_domain(self) -> str:
+    def rl_domain(self) -> str:
         """
         奖励域
 
@@ -184,7 +188,7 @@ class RLBaseNode(ABC):
 
     @abstractmethod
     def rl_gen_reward(self) -> float:
-        reward_domain = self.rl_reward_domain()
+        reward_domain = self.rl_domain()
         if reward_domain != '':
             assert isinstance(self, Node) and isinstance(self, RLBaseNode), 'RLOnPolicyNode 必须得继承Node节点'
             assert self.context is not None, 'context必须得设置好'
@@ -309,16 +313,20 @@ class RLBaseNode(ABC):
         reward = self.rl_gen_reward()
         obs = self.rl_gen_obs()
         done = self.rl_gen_done()
+        action_mask = self.rl_gen_action_mask()
+
         if train:
             try:
                 if self.rl_collector is None:
                     self.rl_collector = bt_on_policy_collect_rollouts(
                             model,
-                            last_obs=obs)
+                            last_obs=obs,
+                            last_action_mask=action_mask
+                    )
                     action = self.rl_collector.send(None)
                 else:
                     info = info
-                    action = self.rl_collector.send((obs, reward, done, info))
+                    action = self.rl_collector.send((obs, reward, done, info, action_mask))
             except StopIteration:
                 self.rl_collector = None
                 self.rl_iteration += 1
@@ -327,11 +335,16 @@ class RLBaseNode(ABC):
 
                 self.rl_collector = bt_on_policy_collect_rollouts(
                         model,
-                        last_obs=obs)
+                        last_obs=obs,
+                        last_action_mask=action_mask
+                )
                 action = self.rl_collector.send(None)
         else:
             # 预测模式
-            action, state = model.predict(obs, deterministic=deterministic)
+            if action_mask is not None:
+                action, state = model.predict(obs, deterministic=deterministic, action_mask=action_mask)
+            else:
+                action, state = model.predict(obs, deterministic=deterministic)
 
         self.rl_obs = obs
         self.rl_reward = reward
